@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   toggle: {
-    color: COLORS.primary,
+    color: COLORS.subtext,
     fontWeight: "bold",
   },
 });

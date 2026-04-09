@@ -1,12 +1,13 @@
-import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-    Alert, SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert, SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { COLORS } from "../../constants/colors";
 
@@ -19,16 +20,12 @@ const barbers = [
   { name: "Jake", role: "Barber Artist" },
 ];
 
-type Props = {
-  searchParams: {
-    service?: string;
-    price?: string;
-    duration?: string;
-  };
-};
-
-export default function SelectBarber({ searchParams }: Props) {
-  const { service, price, duration } = searchParams;
+export default function SelectBarber() {
+  const { service, price, duration } = useLocalSearchParams<{
+    service: string;
+    price: string;
+    duration: string;
+  }>();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   function handleBook() {
@@ -38,10 +35,10 @@ export default function SelectBarber({ searchParams }: Props) {
     }
 
     const barber = barbers[selectedIndex];
-    Alert.alert(
-      "Booking Confirmed",
-      `You selected ${service} with ${barber.name}.`,
-    );
+    router.push({
+      pathname: "/categories/booking",
+      params: { service, price, duration, barber: barber.name },
+    });
   }
 
   return (
@@ -51,22 +48,13 @@ export default function SelectBarber({ searchParams }: Props) {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.backText}>B</Text>
+          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Select Barber</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>
-            {service || "Selected Service"}
-          </Text>
-          <Text style={styles.summarySubtitle}>
-            {duration} · {price}
-          </Text>
-        </View>
-
         {barbers.map((barber, index) => {
           const selected = selectedIndex === index;
           return (
@@ -92,6 +80,36 @@ export default function SelectBarber({ searchParams }: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Summary</Text>
+
+          <View style={styles.summaryRow}>
+            <View>
+              <Text style={styles.summaryServiceName}>{service || "—"}</Text>
+              <Text style={styles.summaryDuration}>{duration}</Text>
+            </View>
+            <Text style={styles.summaryPrice}>{price}</Text>
+          </View>
+
+          {selectedIndex !== null && (
+            <>
+              <View style={styles.summaryRow} >
+                <View>
+                  <Text style={styles.summaryServiceName}>{barbers[selectedIndex].name}</Text>
+                  <Text style={styles.summaryDuration}>{barbers[selectedIndex].role}</Text>
+                </View>
+              </View>
+            </>
+          )}
+
+          <View style={styles.divider} />
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.totalLabel}>Total to pay</Text>
+            <Text style={styles.totalPrice}>{price}</Text>
+          </View>
+        </View>
+
         <TouchableOpacity
           style={[
             styles.bookButton,
@@ -119,19 +137,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.card,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backText: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "700",
-  },
+  backButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.card, justifyContent: "center", alignItems: "center" },
   pageTitle: {
     color: COLORS.text,
     fontSize: 18,
@@ -142,23 +148,55 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 120,
+    paddingBottom: 320,
   },
   summaryCard: {
     backgroundColor: COLORS.card,
     borderRadius: 20,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   summaryTitle: {
     color: COLORS.text,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
-    marginBottom: 6,
+    marginBottom: 14,
   },
-  summarySubtitle: {
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  summaryServiceName: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  summaryDuration: {
     color: COLORS.subtext,
-    fontSize: 14,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  summaryPrice: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 10,
+  },
+  totalLabel: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  totalPrice: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
   },
   barberCard: {
     flexDirection: "row",

@@ -1,16 +1,14 @@
 import { router } from "expo-router";
-import { signOut } from "firebase/auth";
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { COLORS } from "../constants/colors";
-import { auth } from "../services/firebase";
 
 const categories = [
   { label: "SERVICE", route: "/categories/service" },
@@ -21,24 +19,15 @@ const categories = [
 
 const navItems = [
   { label: "Home", route: "/home" },
-  { label: "History", route: "/history" },
   { label: "Profile", route: "/profile" },
 ] as const;
 
 export default function Home() {
-  const logout = async () => {
-    await signOut(auth);
-    router.replace("/");
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>ALLDAYFADE</Text>
-          <TouchableOpacity style={styles.profileButton} onPress={logout}>
-            <Text style={styles.profileText}>👤</Text>
-          </TouchableOpacity>
         </View>
 
         <Text style={styles.subtitle}>

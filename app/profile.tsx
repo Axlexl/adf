@@ -1,30 +1,155 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { signOut } from "firebase/auth";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Clipboard,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { COLORS } from "../constants/colors";
-import { auth } from "../services/firebase";
+import { auth, db } from "../services/firebase";
+
+const SHOP_ADDRESS =
+  "Vinzon Street Obrero, ALT BUILDING Second floor Davao City, Davao Del Sur 8000";
+
+type Booking = {
+  id: string;
+  bookingId: string;
+  service: string;
+  duration: string;
+  price: string;
+  barber: string;
+  date: string;
+  time: string;
+  status: string;
+  fullName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  createdAt: string;
+  // ISO date stored at booking time for reliable comparison
+  isoDate?: string;
+};
+
+type Section = "appointments" | "details";
+type Tab = "upcoming" | "past";
+
+// Use isoDate if available, otherwise fall back to createdAt
+function getBookingTimestamp(b: Booking): number {
+  if (b.isoDate) return new Date(b.isoDate).getTime();
+  return new Date(b.createdAt).getTime();
+}
 
 export default function Profile() {
-  const [userEmail, setUserEmail] = useState("");
+  const user = auth.currentUser;
+  const [section, setSection] = useState<Section>("appointments");
+  const [tab, setTab] = useState<Tab>("upcoming");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [showCancelSuccess, setShowCancelSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const latestBooking = bookings[0] ?? null;
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-      setUserEmail(user.email || "");
-    }
-  }, []);
+    if (!user) return;
+    const q = query(collection(db, "bookings"), where("uid", "==", user.uid));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const sorted = snap.docs
+          .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setBookings(sorted);
+        setLoadingBookings(false);
+      },
+      (err) => {
+        console.warn("Firestore error:", err);
+        setLoadingBookings(false);
+      }
+    );
+    return unsub;
+  }, [user?.uid]);
 
-  const logout = async () => {
+  const now = Date.now();
+  const active = bookings.filter((b) => b.status !== "cancelled");
+  // upcoming = booked in the future (isoDate > now) OR recent (within 24h, no isoDate)
+  const upcoming = active.filter((b) => getBookingTimestamp(b) >= now - 1000 * 60 * 60 * 24);
+  const past = active.filter((b) => getBookingTimestamp(b) < now - 1000 * 60 * 60 * 24);
+  const displayed = tab === "upcoming" ? upcoming : past;
+
+  async function handleLogout() {
     await signOut(auth);
     router.replace("/");
-  };
+  }
+
+  function handleCancel(booking: Booking) {
+    setCancelTarget(booking);
+    setSelectedBooking(null);
+  }
+
+  async function confirmCancel() {
+    if (!cancelTarget) return;
+    setCancelLoading(true);
+    try {
+      await updateDoc(doc(db, "bookings", cancelTarget.id), { status: "cancelled" });
+      setCancelTarget(null);
+      setShowCancelSuccess(true);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not cancel. Please try again.");
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
+  function handleReschedule(booking: Booking) {
+    setSelectedBooking(null);
+    router.push({
+      pathname: "/categories/booking" as any,
+      params: {
+        service: booking.service,
+        price: booking.price,
+        duration: booking.duration,
+        barber: booking.barber,
+        rescheduleId: booking.id,
+        rescheduleEmail: booking.email ?? "",
+        rescheduleFullName: booking.fullName ?? "",
+      },
+    });
+  }
+
+  function copyId(id: string) {
+    Clipboard.setString(id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  const displayName =
+    latestBooking?.fullName || user?.email?.split("@")[0] || "Client";
+  const displayEmail = user?.email || "";
 
   return (
     <SafeAreaView style={styles.container}>
@@ -33,30 +158,305 @@ export default function Profile() {
           style={styles.backButton}
           onPress={() => router.push("/home")}
         >
-          <Text style={styles.backText}>B</Text>
+          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Profile</Text>
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.profileCard}>
-          <Text style={styles.title}>Profile</Text>
-          <View style={styles.infoSection}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{userEmail}</Text>
-          </View>
+      {/* User info strip */}
+      <View style={styles.userStrip}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {displayName.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View>
+          <Text style={styles.userName}>{displayName}</Text>
+          <Text style={styles.userEmail}>{displayEmail}</Text>
         </View>
       </View>
+
+      {/* Section tabs */}
+      <View style={styles.sectionTabs}>
+        <TouchableOpacity
+          style={[styles.sectionTab, section === "appointments" && styles.sectionTabActive]}
+          onPress={() => setSection("appointments")}
+        >
+          <Text style={[styles.sectionTabText, section === "appointments" && styles.sectionTabTextActive]}>
+            Appointments
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sectionTab, section === "details" && styles.sectionTabActive]}
+          onPress={() => setSection("details")}
+        >
+          <Text style={[styles.sectionTabText, section === "details" && styles.sectionTabTextActive]}>
+            Your details
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.sectionTab} onPress={handleLogout}>
+          <Text style={styles.sectionTabText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* ── Appointments ── */}
+        {section === "appointments" && (
+          <>
+            <View style={styles.tabs}>
+              <TouchableOpacity
+                style={[styles.tabBtn, tab === "upcoming" && styles.tabBtnActive]}
+                onPress={() => setTab("upcoming")}
+              >
+                <Text style={[styles.tabText, tab === "upcoming" && styles.tabTextActive]}>
+                  Upcoming
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabBtn, tab === "past" && styles.tabBtnActive]}
+                onPress={() => setTab("past")}
+              >
+                <Text style={[styles.tabText, tab === "past" && styles.tabTextActive]}>
+                  Past
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {loadingBookings ? (
+              <ActivityIndicator color={COLORS.primary} style={{ marginTop: 32 }} />
+            ) : displayed.length === 0 ? (
+              <Text style={styles.emptyText}>
+                {tab === "upcoming"
+                  ? "No upcoming appointments."
+                  : "No past appointments."}
+              </Text>
+            ) : (
+              displayed.map((b) => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={styles.appointmentCard}
+                  onPress={() => setSelectedBooking(b)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.cardTop}>
+                    <Text style={styles.appointmentDate}>{b.date}</Text>
+                    <Text style={styles.appointmentTime}>{b.time}</Text>
+                  </View>
+                  <View style={styles.cardDivider} />
+                  <View style={styles.cardBottom}>
+                    <View style={styles.serviceIcon}>
+                      <Text style={styles.serviceIconText}>ADF</Text>
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.appointmentService}>{b.service}</Text>
+                      <Text style={styles.appointmentMeta}>
+                        {b.duration} · {b.price} · with {b.barber}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </>
+        )}
+
+        {/* ── Details ── */}
+        {section === "details" && (
+          <View style={styles.detailsCard}>
+            {latestBooking ? (
+              <>
+                <DetailRow label="Full Name" value={latestBooking.fullName} />
+                <DetailRow label="Phone" value={latestBooking.phone} />
+                <DetailRow label="Email" value={latestBooking.email} />
+                <DetailRow label="Address" value={latestBooking.address} />
+                <DetailRow label="City" value={latestBooking.city} />
+                <DetailRow label="Province" value={latestBooking.province} />
+                <DetailRow label="Postal Code" value={latestBooking.postalCode} />
+              </>
+            ) : (
+              <Text style={styles.emptyText}>
+                No details yet. Complete a booking first.
+              </Text>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* ── Appointment detail modal ── */}
+      <Modal
+        visible={!!selectedBooking}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedBooking(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setSelectedBooking(null)}
+                style={styles.modalBack}
+              >
+                <Ionicons name="chevron-back" size={20} color={COLORS.text} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Your appointment details</Text>
+            </View>
+
+            {selectedBooking && (
+              <ScrollView>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Address</Text>
+                  <Text style={styles.modalValueBold}>{SHOP_ADDRESS}</Text>
+                </View>
+                <View style={styles.modalDivider} />
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Date & time</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalValueBold}>
+                      {selectedBooking.date} · {selectedBooking.time}
+                    </Text>
+                    <Text style={styles.modalValueSub}>Time zone (Asia/Manila)</Text>
+                  </View>
+                </View>
+                <View style={styles.modalDivider} />
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Service</Text>
+                  <View style={styles.modalServiceRow}>
+                    <View style={styles.serviceIcon}>
+                      <Text style={styles.serviceIconText}>ADF</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.modalValueBold}>
+                        {selectedBooking.service}
+                      </Text>
+                      <Text style={styles.modalValueSub}>
+                        {selectedBooking.duration} · with {selectedBooking.barber}
+                      </Text>
+                    </View>
+                    <Text style={styles.modalPrice}>{selectedBooking.price}</Text>
+                  </View>
+                </View>
+                <View style={styles.modalDivider} />
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Booking ID</Text>
+                  <TouchableOpacity
+                    style={styles.bookingIdRow}
+                    onPress={() => copyId(selectedBooking.bookingId)}
+                  >
+                    <Text style={styles.modalValueBold}>
+                      {selectedBooking.bookingId}
+                    </Text>
+                    <Text style={styles.copyIcon}>{copied ? "✓" : "⧉"}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.rescheduleBtn}
+                    onPress={() => handleReschedule(selectedBooking)}
+                  >
+                    <Text style={styles.rescheduleBtnText}>
+                      Reschedule appointment
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cancelBtn}
+                    onPress={() => handleCancel(selectedBooking)}
+                  >
+                    <Text style={styles.cancelBtnText}>Cancel appointment</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Cancel confirm modal ── */}
+      <Modal
+        visible={!!cancelTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCancelTarget(null)}
+      >
+        <View style={styles.cancelOverlay}>
+          <View style={styles.cancelCard}>
+            <TouchableOpacity
+              style={styles.cancelClose}
+              onPress={() => setCancelTarget(null)}
+            >
+              <Text style={styles.cancelCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.cancelTitle}>Cancel your appointment?</Text>
+            <Text style={styles.cancelBody}>
+              If something's come up, we understand. Please note that cancelling
+              cannot be reversed.
+            </Text>
+            <View style={styles.cancelActions}>
+              <TouchableOpacity
+                onPress={() => setCancelTarget(null)}
+                style={styles.keepBtn}
+              >
+                <Text style={styles.keepBtnText}>No, keep it</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmCancel}
+                style={styles.yesCancelBtn}
+                disabled={cancelLoading}
+              >
+                {cancelLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.yesCancelBtnText}>Yes, cancel</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Cancel success modal ── */}
+      <Modal
+        visible={showCancelSuccess}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCancelSuccess(false)}
+      >
+        <View style={styles.cancelOverlay}>
+          <View style={styles.cancelCard}>
+            <Text style={styles.successIcon}>✓</Text>
+            <Text style={styles.cancelTitle}>Appointment cancelled</Text>
+            <Text style={styles.cancelBody}>
+              Your appointment has been successfully cancelled.
+            </Text>
+            <TouchableOpacity
+              style={styles.yesCancelBtn}
+              onPress={() => setShowCancelSuccess(false)}
+            >
+              <Text style={styles.yesCancelBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
+function DetailRow({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -64,54 +464,145 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  backButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.card, justifyContent: "center", alignItems: "center" },
+  pageTitle: { color: COLORS.text, fontSize: 18, fontWeight: "bold" },
+  placeholder: { width: 48 },
+
+  // User strip
+  userStrip: {
+    flexDirection: "row", alignItems: "center", gap: 14,
+    paddingHorizontal: 20, paddingBottom: 16,
+  },
+  avatar: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: COLORS.primary, justifyContent: "center", alignItems: "center",
+  },
+  avatarText: { color: "#fff", fontSize: 20, fontWeight: "800" },
+  userName: { color: COLORS.text, fontSize: 16, fontWeight: "800" },
+  userEmail: { color: COLORS.subtext, fontSize: 12, marginTop: 2 },
+
+  // Section tabs
+  sectionTabs: {
+    flexDirection: "row",
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    paddingHorizontal: 20,
+  },
+  sectionTab: { paddingVertical: 12, paddingHorizontal: 14, marginRight: 4 },
+  sectionTabActive: { borderBottomWidth: 2, borderBottomColor: COLORS.text },
+  sectionTabText: { color: COLORS.subtext, fontSize: 13, fontWeight: "600" },
+  sectionTabTextActive: { color: COLORS.text, fontWeight: "700" },
+
+  content: { padding: 20, paddingBottom: 40 },
+
+  // Appointment tabs
+  tabs: { flexDirection: "row", gap: 8, marginBottom: 16 },
+  tabBtn: {
+    paddingHorizontal: 18, paddingVertical: 8,
+    borderRadius: 20, backgroundColor: COLORS.card,
+  },
+  tabBtnActive: { backgroundColor: COLORS.text },
+  tabText: { color: COLORS.subtext, fontSize: 13, fontWeight: "600" },
+  tabTextActive: { color: COLORS.background, fontWeight: "700" },
+
+  // Appointment card — vertical layout
+  appointmentCard: {
     backgroundColor: COLORS.card,
-    justifyContent: "center",
-    alignItems: "center",
+    borderRadius: 16, padding: 16, marginBottom: 12,
   },
-  backText: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "700",
+  cardTop: { marginBottom: 10 },
+  appointmentDate: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
+  appointmentTime: { color: COLORS.subtext, fontSize: 13, marginTop: 2 },
+  cardDivider: { height: 1, backgroundColor: COLORS.border, marginBottom: 10 },
+  cardBottom: { flexDirection: "row", alignItems: "center", gap: 12 },
+  serviceIcon: {
+    width: 40, height: 40, borderRadius: 10,
+    backgroundColor: "#222", justifyContent: "center", alignItems: "center",
   },
-  pageTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "bold",
+  serviceIconText: { color: COLORS.text, fontSize: 8, fontWeight: "900" },
+  cardInfo: { flex: 1 },
+  appointmentService: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
+  appointmentMeta: { color: COLORS.subtext, fontSize: 12, marginTop: 3 },
+  emptyText: { color: COLORS.subtext, fontSize: 14, marginTop: 8 },
+
+  // Details card
+  detailsCard: {
+    backgroundColor: COLORS.card, borderRadius: 16, padding: 16, gap: 4,
   },
-  placeholder: {
-    width: 48,
+  detailRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  content: {
-    flex: 1,
-    padding: 20,
+  detailLabel: { color: COLORS.subtext, fontSize: 11, marginBottom: 3 },
+  detailValue: { color: COLORS.text, fontSize: 14, fontWeight: "600" },
+
+  // Appointment detail modal
+  modalOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end",
   },
-  profileCard: {
+  modalCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 20, maxHeight: "85%",
   },
-  title: {
-    color: COLORS.text,
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
+  modalHeader: {
+    flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20,
   },
-  infoSection: {
-    marginBottom: 16,
+  modalBack: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: COLORS.border, justifyContent: "center", alignItems: "center",
   },
-  label: {
-    color: COLORS.subtext,
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
+  modalTitle: { color: COLORS.text, fontSize: 16, fontWeight: "700" },
+  modalRow: {
+    flexDirection: "row", alignItems: "flex-start",
+    paddingVertical: 14, gap: 12,
   },
-  value: {
-    color: COLORS.text,
-    fontSize: 16,
+  modalLabel: { color: COLORS.subtext, fontSize: 13, width: 80, flexShrink: 0 },
+  modalValueBold: { color: COLORS.text, fontSize: 13, fontWeight: "700", flex: 1 },
+  modalValueSub: { color: COLORS.subtext, fontSize: 12, marginTop: 3 },
+  modalDivider: { height: 1, backgroundColor: COLORS.border },
+  modalServiceRow: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  modalPrice: { color: COLORS.text, fontSize: 13, fontWeight: "700" },
+  bookingIdRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  copyIcon: { color: COLORS.subtext, fontSize: 16 },
+  modalActions: {
+    flexDirection: "column", gap: 10, marginTop: 24, marginBottom: 8,
+  },
+  rescheduleBtn: {
+    paddingVertical: 14, borderRadius: 30,
+    borderWidth: 1.5, borderColor: COLORS.text, alignItems: "center",
+  },
+  rescheduleBtnText: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
+  cancelBtn: {
+    paddingVertical: 14, borderRadius: 30, alignItems: "center",
+  },
+  cancelBtnText: { color: COLORS.subtext, fontSize: 14 },
+
+  // Cancel modals
+  cancelOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center", alignItems: "center", padding: 24,
+  },
+  cancelCard: {
+    backgroundColor: COLORS.card, borderRadius: 20, padding: 24, width: "100%",
+  },
+  cancelClose: { position: "absolute", top: 16, right: 16, padding: 4 },
+  cancelCloseText: { color: COLORS.subtext, fontSize: 16 },
+  cancelTitle: {
+    color: COLORS.text, fontSize: 17, fontWeight: "700",
+    marginBottom: 12, marginTop: 4,
+  },
+  cancelBody: { color: COLORS.subtext, fontSize: 13, lineHeight: 20, marginBottom: 24 },
+  cancelActions: {
+    flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 16,
+  },
+  keepBtn: { paddingVertical: 10, paddingHorizontal: 4 },
+  keepBtnText: { color: COLORS.subtext, fontSize: 14 },
+  yesCancelBtn: {
+    backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 24,
+    borderRadius: 30, alignItems: "center",
+  },
+  yesCancelBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  successIcon: {
+    fontSize: 36, textAlign: "center", marginBottom: 12, color: COLORS.primary,
   },
 });

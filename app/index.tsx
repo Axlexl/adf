@@ -1,14 +1,13 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 
 import Button from "../components/ui/Button";
@@ -16,8 +15,8 @@ import InputField from "../components/ui/InputField";
 import { COLORS } from "../constants/colors";
 
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
 } from "firebase/auth";
 import { auth } from "../services/firebase";
 
@@ -25,28 +24,40 @@ export default function Index() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleAuth = async () => {
+    setError("");
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter your email and password.");
+      return;
+    }
     try {
       if (isLogin) {
-        // LOGIN
         await signInWithEmailAndPassword(auth, email, password);
         router.replace("/home");
       } else {
-        // REGISTER
         await createUserWithEmailAndPassword(auth, email, password);
-
-        Alert.alert("Success", "Account created! Please log in.");
-
-        // CLEAR INPUTS
         setEmail("");
         setPassword("");
-
-        // SWITCH TO LOGIN TAB
         setIsLogin(true);
+        setError("");
       }
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      const code = e.code as string;
+      if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
+        setError("Incorrect password. Please try again.");
+      } else if (code === "auth/user-not-found") {
+        setError("No account found with this email.");
+      } else if (code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else if (code === "auth/email-already-in-use") {
+        setError("An account with this email already exists.");
+      } else if (code === "auth/weak-password") {
+        setError("Password must be at least 6 characters.");
+      } else {
+        setError(e.message ?? "Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -59,16 +70,16 @@ export default function Index() {
         {/* TITLE */}
         <Text style={styles.title}>
           <Text style={{ color: COLORS.text }}>ALLDAY</Text>
-          <Text style={{ color: COLORS.primary }}>FADE</Text>
+          <Text style={{ color: COLORS.text }}>FADE</Text>
         </Text>
 
-        <Text style={styles.subtitle}>Invest In Your Hair. </Text>
+        <Text style={styles.subtitle}>Invest In Your Hair.</Text>
 
         {/* TOGGLE */}
         <View style={styles.toggle}>
           <TouchableOpacity
             style={[styles.tab, isLogin && styles.activeTab]}
-            onPress={() => setIsLogin(true)}
+            onPress={() => { setIsLogin(true); setError(""); }}
           >
             <Text style={isLogin ? styles.activeText : styles.inactiveText}>
               Login
@@ -77,7 +88,7 @@ export default function Index() {
 
           <TouchableOpacity
             style={[styles.tab, !isLogin && styles.activeTab]}
-            onPress={() => setIsLogin(false)}
+            onPress={() => { setIsLogin(false); setError(""); }}
           >
             <Text style={!isLogin ? styles.activeText : styles.inactiveText}>
               Register
@@ -86,13 +97,16 @@ export default function Index() {
         </View>
 
         {/* INPUTS */}
-        <InputField placeholder="Email" value={email} onChangeText={setEmail} />
+        <InputField placeholder="Email" value={email} onChangeText={(v: string) => { setEmail(v); setError(""); }} />
         <InputField
           placeholder="Password"
           secure
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(v: string) => { setPassword(v); setError(""); }}
         />
+
+        {/* ERROR */}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         {/* BUTTON */}
         <Button title={isLogin ? "Sign In" : "Register"} onPress={handleAuth} />
@@ -133,14 +147,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   activeTab: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.text,
     borderRadius: 12,
   },
   activeText: {
-    color: "#fff",
+    color: COLORS.background,
     fontWeight: "bold",
   },
   inactiveText: {
     color: COLORS.subtext,
+  },
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: "center",
   },
 });

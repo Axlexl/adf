@@ -1,11 +1,12 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
-  Linking,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Linking,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { COLORS } from "../../constants/colors";
 
@@ -20,7 +21,7 @@ export default function Address() {
           style={styles.backButton}
           onPress={() => router.push("/home")}
         >
-          <Text style={styles.backText}>B</Text>
+          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Address</Text>
         <View style={styles.placeholder} />
@@ -58,19 +59,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.card,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backText: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "700",
-  },
+  backButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.card, justifyContent: "center", alignItems: "center" },
   pageTitle: {
     color: COLORS.text,
     fontSize: 18,

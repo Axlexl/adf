@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -61,14 +62,21 @@ const services = [
 
 export default function Service() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [selectedService, setSelectedService] = useState<(typeof services)[number] | null>(null);
 
   function handleSelectService(service: (typeof services)[number]) {
+    setSelectedService(service);
+  }
+
+  function handleContinue() {
+    if (!selectedService) return;
+    
     router.push({
       pathname: "/categories/select-barber",
       params: {
-        service: service.title,
-        price: service.price,
-        duration: service.duration,
+        service: selectedService.title,
+        price: selectedService.price,
+        duration: selectedService.duration,
       },
     });
   }
@@ -80,7 +88,7 @@ export default function Service() {
           style={styles.backButton}
           onPress={() => router.push("/home")}
         >
-          <Text style={styles.backText}>B</Text>
+          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Services</Text>
         <View style={styles.placeholder} />
@@ -89,10 +97,11 @@ export default function Service() {
       <ScrollView contentContainerStyle={styles.content}>
         {services.map((service, index) => {
           const expanded = expandedIndex === index;
+          const isSelected = selectedService?.title === service.title;
           return (
             <TouchableOpacity
               key={service.title}
-              style={styles.card}
+              style={[styles.card, isSelected && styles.cardSelected]}
               activeOpacity={0.9}
               onPress={() => handleSelectService(service)}
             >
@@ -126,6 +135,41 @@ export default function Service() {
           );
         })}
       </ScrollView>
+
+      {/* Summary Footer */}
+      <View style={styles.footer}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Summary</Text>
+
+          {selectedService ? (
+            <>
+              <View style={styles.summaryRow}>
+                <View>
+                  <Text style={styles.summaryServiceName}>{selectedService.title}</Text>
+                  <Text style={styles.summaryDuration}>{selectedService.duration}</Text>
+                </View>
+                <Text style={styles.summaryPrice}>{selectedService.price}</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.summaryRow}>
+                <Text style={styles.totalLabel}>Total to pay</Text>
+                <Text style={styles.totalPrice}>{selectedService.price}</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.summaryPlaceholder}>No service selected yet</Text>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.continueButton, !selectedService && styles.continueButtonDisabled]}
+          activeOpacity={0.9}
+          onPress={handleContinue}
+          disabled={!selectedService}
+        >
+          <Text style={styles.continueButtonText}>Continue</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -142,19 +186,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.card,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backText: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "700",
-  },
+  backButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.card, justifyContent: "center", alignItems: "center" },
   pageTitle: {
     color: COLORS.text,
     fontSize: 18,
@@ -165,13 +197,17 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 280,
   },
   card: {
     backgroundColor: COLORS.card,
     borderRadius: 20,
     padding: 18,
     marginBottom: 16,
+  },
+  cardSelected: {
+    borderColor: COLORS.primary,
+    borderWidth: 2,
   },
   cardHeader: {
     flexDirection: "row",
@@ -211,5 +247,78 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 8,
+  },
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 20,
+    backgroundColor: COLORS.background,
+  },
+  summaryCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 12,
+  },
+  summaryTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 14,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  summaryServiceName: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  summaryDuration: {
+    color: COLORS.subtext,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  summaryPrice: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 12,
+  },
+  totalLabel: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  totalPrice: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  summaryPlaceholder: {
+    color: COLORS.subtext,
+    fontSize: 14,
+  },
+  continueButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+  continueButtonDisabled: {
+    backgroundColor: COLORS.border,
+  },
+  continueButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
