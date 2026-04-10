@@ -1,76 +1,60 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { addDoc, collection, onSnapshot } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { COLORS } from "../../constants/colors";
+import { db } from "../../services/firebase";
 
-const services = [
-  {
-    title: "HAIR COLOR",
-    duration: "1 hr",
-    price: "₱800",
-    details: ["BASIC COLORS BLACK BROWN", "WITH HAIRCUT"],
-  },
-  {
-    title: "HAIR PERM",
-    duration: "3 hrs",
-    price: "₱2,500",
-    details: ["Hair cut", "Perm", "Complimentary Wash"],
-  },
-  {
-    title: "BEARD TRIM",
-    duration: "30 mins",
-    price: "₱100",
-    details: ["Tapering facial hair to maintain a neat look"],
-  },
-  {
-    title: "GUCCI",
-    duration: "45 mins",
-    price: "₱300",
-    details: ["HAIRCUT & SHAMPOO WITH SLICK GROOM FINISH!"],
-  },
-  {
-    title: "LONG TO SHORT",
-    duration: "1 hr",
-    price: "₱400",
-    details: [
-      "This consist",
-      "WOLF CUT, MOD CUTS etc. that has long process precise cuts",
-      "The service has Groom and Shampoo",
-    ],
-  },
-  {
-    title: "BAPE",
-    duration: "45 mins",
-    price: "₱250",
-    details: ["Haircut fades.", "clean trims etc", "Basic groom"],
-  },
-  {
-    title: "House Call & Wedding Calls",
-    duration: "3 hrs",
-    price: "₱1,500",
-    details: ["Home service and special event bookings."],
-  },
+type Service = { id: string; title: string; duration: string; price: string; details: string[] };
+
+const DEFAULT_SERVICES: Omit<Service, "id">[] = [
+  { title: "HAIR COLOR", duration: "1 hr", price: "₱800", details: ["BASIC COLORS BLACK BROWN", "WITH HAIRCUT"] },
+  { title: "HAIR PERM", duration: "3 hrs", price: "₱2,500", details: ["Hair cut", "Perm", "Complimentary Wash"] },
+  { title: "BEARD TRIM", duration: "30 mins", price: "₱100", details: ["Tapering facial hair to maintain a neat look"] },
+  { title: "GUCCI", duration: "45 mins", price: "₱300", details: ["HAIRCUT & SHAMPOO WITH SLICK GROOM FINISH!"] },
+  { title: "LONG TO SHORT", duration: "1 hr", price: "₱400", details: ["WOLF CUT, MOD CUTS etc.", "The service has Groom and Shampoo"] },
+  { title: "BAPE", duration: "45 mins", price: "₱250", details: ["Haircut fades.", "clean trims etc", "Basic groom"] },
+  { title: "House Call & Wedding Calls", duration: "3 hrs", price: "₱1,500", details: ["Home service and special event bookings."] },
 ];
 
 export default function Service() {
+  const [services, setServices] = useState<Service[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [selectedService, setSelectedService] = useState<(typeof services)[number] | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  function handleSelectService(service: (typeof services)[number]) {
+  useEffect(() => {
+    return onSnapshot(collection(db, "services"), (snap) => {
+      if (snap.empty) {
+        // Seed defaults into Firestore so admin can manage them
+        DEFAULT_SERVICES.forEach((s) =>
+          addDoc(collection(db, "services"), s).catch(() => {})
+        );
+        // Show defaults immediately while seeding
+        setServices(DEFAULT_SERVICES.map((s, i) => ({ id: String(i), ...s })));
+      } else {
+        setServices(
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<Service, "id">) }))
+            .sort((a, b) => a.title.localeCompare(b.title))
+        );
+      }
+    });
+  }, []);
+
+  function handleSelectService(service: Service) {
     setSelectedService(service);
   }
 
   function handleContinue() {
     if (!selectedService) return;
-    
     router.push({
       pathname: "/categories/select-barber",
       params: {

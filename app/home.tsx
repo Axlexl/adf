@@ -9,6 +9,9 @@ import {
   View,
 } from "react-native";
 import { COLORS } from "../constants/colors";
+import { auth } from "../services/firebase";
+
+const ADMIN_EMAIL = "admin@alldayfade.com";
 
 const categories = [
   { label: "SERVICE", route: "/categories/service" },
@@ -23,11 +26,18 @@ const navItems = [
 ] as const;
 
 export default function Home() {
+  const isAdmin = auth.currentUser?.email === ADMIN_EMAIL;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>ALLDAYFADE</Text>
+          {isAdmin && (
+            <TouchableOpacity style={styles.adminBtn} onPress={() => router.push("/admin" as any)}>
+              <Text style={styles.adminBtnText}>Admin</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <Text style={styles.subtitle}>
@@ -93,6 +103,19 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 28,
     fontWeight: "bold",
+  },
+  adminBtn: {
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  adminBtnText: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "700",
   },
   profileButton: {
     width: 44,

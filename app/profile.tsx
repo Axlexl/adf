@@ -1,32 +1,38 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { signOut } from "firebase/auth";
 import {
-  collection,
-  doc,
-  onSnapshot,
-  query,
-  updateDoc,
-  where,
+    addDoc,
+    collection,
+    doc,
+    onSnapshot,
+    query,
+    setDoc,
+    updateDoc,
+    where,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Clipboard,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Clipboard,
+    Modal,
+    Image as RNImage,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { COLORS } from "../constants/colors";
 import { auth, db } from "../services/firebase";
 
 const SHOP_ADDRESS =
   "Vinzon Street Obrero, ALT BUILDING Second floor Davao City, Davao Del Sur 8000";
+
+const ADMIN_EMAIL = "admin@alldayfade.com";
 
 type Booking = {
   id: string;
@@ -46,12 +52,43 @@ type Booking = {
   province?: string;
   postalCode?: string;
   createdAt: string;
-  // ISO date stored at booking time for reliable comparison
   isoDate?: string;
 };
 
-type Section = "appointments" | "details";
+type CancellationRecord = { id: string; bookingId: string; service: string; barber: string; date: string; time: string; cancelledAt: string; uid?: string };
+type RescheduleRecord = { id: string; bookingId: string; service: string; barber: string; newDate: string; newTime: string; rescheduledAt: string; uid?: string };
+
+type Section = "appointments" | "details" | "transactions" | "cancellations" | "reschedules";
 type Tab = "upcoming" | "past";
+
+// Parse the appointment date string (e.g. "Sun 26 April" or "Fri 10 April") into a Date
+function parseAppointmentDate(dateStr: string, timeStr: string): Date {
+  try {
+    // dateStr format: "Sun 26 April" — extract day and month
+    const parts = dateStr.trim().split(" ");
+    // parts[0] = day name, parts[1] = day number, parts[2] = month name
+    const day = parseInt(parts[1]);
+    const monthName = parts[2];
+    const months: Record<string, number> = {
+      January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+      July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
+    };
+    const month = months[monthName] ?? 0;
+    const year = new Date().getFullYear();
+
+    // Parse time e.g. "2:00 PM"
+    const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    let hours = timeParts ? parseInt(timeParts[1]) : 0;
+    const minutes = timeParts ? parseInt(timeParts[2]) : 0;
+    const ampm = timeParts ? timeParts[3].toUpperCase() : "AM";
+    if (ampm === "PM" && hours !== 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+
+    return new Date(year, month, day, hours, minutes);
+  } catch {
+    return new Date(0);
+  }
+}
 
 // Use isoDate if available, otherwise fall back to createdAt
 function getBookingTimestamp(b: Booking): number {
@@ -61,15 +98,21 @@ function getBookingTimestamp(b: Booking): number {
 
 export default function Profile() {
   const user = auth.currentUser;
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const [section, setSection] = useState<Section>("appointments");
   const [tab, setTab] = useState<Tab>("upcoming");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Booking[]>([]);
+  const [allCancellations, setAllCancellations] = useState<CancellationRecord[]>([]);
+  const [allReschedules, setAllReschedules] = useState<RescheduleRecord[]>([]);
+  const [txTab, setTxTab] = useState<"upcoming" | "past">("upcoming");
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const latestBooking = bookings[0] ?? null;
 
@@ -90,19 +133,92 @@ export default function Profile() {
         setLoadingBookings(false);
       }
     );
-    return unsub;
+
+    // Load profile photo
+    const uid = user.uid;
+    const unsubUser = onSnapshot(doc(db, "users", uid), (snap) => {
+      if (snap.exists() && snap.data().photoUri) {
+        setPhotoUri(snap.data().photoUri);
+      }
+    });
+
+    // Load ALL bookings + cancellations + reschedules for admin
+    let unsubAdmin = () => {};
+    let unsubCan = () => {};
+    let unsubRes = () => {};
+    if (user.email === ADMIN_EMAIL) {
+      unsubAdmin = onSnapshot(collection(db, "bookings"), (snap) => {
+        setAllTransactions(
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        );
+      });
+      unsubCan = onSnapshot(collection(db, "cancellations"), (snap) => {
+        setAllCancellations(
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<CancellationRecord, "id">) }))
+            .sort((a, b) => b.cancelledAt.localeCompare(a.cancelledAt))
+        );
+      });
+      unsubRes = onSnapshot(collection(db, "reschedules"), (snap) => {
+        setAllReschedules(
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<RescheduleRecord, "id">) }))
+            .sort((a, b) => b.rescheduledAt.localeCompare(a.rescheduledAt))
+        );
+      });
+    }
+
+    return () => { unsub(); unsubUser(); unsubAdmin(); unsubCan(); unsubRes(); };
   }, [user?.uid]);
+
+  async function pickPhoto() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow access to your photo library.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const uri = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      setPhotoUri(uri);
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        setDoc(doc(db, "users", uid), { photoUri: uri }, { merge: true })
+          .catch(() => {});
+      }
+    }
+  }
 
   const now = Date.now();
   const active = bookings.filter((b) => b.status !== "cancelled");
-  // upcoming = booked in the future (isoDate > now) OR recent (within 24h, no isoDate)
-  const upcoming = active.filter((b) => getBookingTimestamp(b) >= now - 1000 * 60 * 60 * 24);
-  const past = active.filter((b) => getBookingTimestamp(b) < now - 1000 * 60 * 60 * 24);
+  const upcoming = active.filter((b) => parseAppointmentDate(b.date, b.time).getTime() >= now);
+  const past = active.filter((b) => parseAppointmentDate(b.date, b.time).getTime() < now);
   const displayed = tab === "upcoming" ? upcoming : past;
 
   async function handleLogout() {
-    await signOut(auth);
-    router.replace("/");
+    Alert.alert(
+      "Log out",
+      "Do you want to log out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes, log out",
+          style: "destructive",
+          onPress: async () => {
+            await signOut(auth);
+            router.replace("/");
+          },
+        },
+      ]
+    );
   }
 
   function handleCancel(booking: Booking) {
@@ -115,6 +231,18 @@ export default function Profile() {
     setCancelLoading(true);
     try {
       await updateDoc(doc(db, "bookings", cancelTarget.id), { status: "cancelled" });
+
+      // Log to cancellations collection
+      addDoc(collection(db, "cancellations"), {
+        bookingId: cancelTarget.bookingId,
+        uid: auth.currentUser?.uid ?? null,
+        service: cancelTarget.service,
+        barber: cancelTarget.barber,
+        date: cancelTarget.date,
+        time: cancelTarget.time,
+        cancelledAt: new Date().toISOString(),
+      }).catch(() => {});
+
       setCancelTarget(null);
       setShowCancelSuccess(true);
     } catch (err) {
@@ -177,8 +305,13 @@ export default function Profile() {
         </View>
       </View>
 
-      {/* Section tabs */}
-      <View style={styles.sectionTabs}>
+      {/* Section tabs — horizontal scroll so they don't overflow */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.sectionTabsScroll}
+        contentContainerStyle={styles.sectionTabs}
+      >
         <TouchableOpacity
           style={[styles.sectionTab, section === "appointments" && styles.sectionTabActive]}
           onPress={() => setSection("appointments")}
@@ -198,7 +331,37 @@ export default function Profile() {
         <TouchableOpacity style={styles.sectionTab} onPress={handleLogout}>
           <Text style={styles.sectionTabText}>Logout</Text>
         </TouchableOpacity>
-      </View>
+        {isAdmin && (
+          <TouchableOpacity
+            style={[styles.sectionTab, section === "transactions" && styles.sectionTabActive]}
+            onPress={() => setSection("transactions")}
+          >
+            <Text style={[styles.sectionTabText, section === "transactions" && styles.sectionTabTextActive]}>
+              Transactions
+            </Text>
+          </TouchableOpacity>
+        )}
+        {isAdmin && (
+          <TouchableOpacity
+            style={[styles.sectionTab, section === "cancellations" && styles.sectionTabActive]}
+            onPress={() => setSection("cancellations")}
+          >
+            <Text style={[styles.sectionTabText, section === "cancellations" && styles.sectionTabTextActive]}>
+              Cancels
+            </Text>
+          </TouchableOpacity>
+        )}
+        {isAdmin && (
+          <TouchableOpacity
+            style={[styles.sectionTab, section === "reschedules" && styles.sectionTabActive]}
+            onPress={() => setSection("reschedules")}
+          >
+            <Text style={[styles.sectionTabText, section === "reschedules" && styles.sectionTabTextActive]}>
+              Reschedules
+            </Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* ── Appointments ── */}
@@ -264,6 +427,21 @@ export default function Profile() {
         {/* ── Details ── */}
         {section === "details" && (
           <View style={styles.detailsCard}>
+            {/* Profile picture */}
+            <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto}>
+              {photoUri ? (
+                <RNImage source={{ uri: photoUri }} style={styles.photoImage} />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons name="camera" size={28} color={COLORS.subtext} />
+                  <Text style={styles.photoPlaceholderText}>Add photo</Text>
+                </View>
+              )}
+              <View style={styles.photoEditBadge}>
+                <Ionicons name="pencil" size={11} color="#fff" />
+              </View>
+            </TouchableOpacity>
+
             {latestBooking ? (
               <>
                 <DetailRow label="Full Name" value={latestBooking.fullName} />
@@ -280,6 +458,124 @@ export default function Profile() {
               </Text>
             )}
           </View>
+        )}
+
+        {/* ── Transactions (admin only) ── */}
+        {section === "transactions" && isAdmin && (
+          <>
+            {/* Upcoming / Past sub-tabs */}
+            <View style={styles.tabs}>
+              <TouchableOpacity
+                style={[styles.tabBtn, txTab === "upcoming" && styles.tabBtnActive]}
+                onPress={() => setTxTab("upcoming")}
+              >
+                <Text style={[styles.tabText, txTab === "upcoming" && styles.tabTextActive]}>Upcoming</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabBtn, txTab === "past" && styles.tabBtnActive]}
+                onPress={() => setTxTab("past")}
+              >
+                <Text style={[styles.tabText, txTab === "past" && styles.tabTextActive]}>Past</Text>
+              </TouchableOpacity>
+            </View>
+
+            {(() => {
+              const nowMs = Date.now();
+              const filtered = allTransactions.filter((b) => {
+                const ts = parseAppointmentDate(b.date, b.time).getTime();
+                return txTab === "upcoming" ? ts >= nowMs : ts < nowMs;
+              });
+              if (filtered.length === 0)
+                return <Text style={styles.emptyText}>No {txTab} bookings.</Text>;
+              return filtered.map((b) => (
+                <View key={b.id} style={styles.appointmentCard}>
+                  <View style={styles.cardTop}>
+                    <Text style={styles.appointmentDate}>{b.fullName ?? "Client"}</Text>
+                    <Text style={styles.appointmentTime}>{b.email}</Text>
+                  </View>
+                  <View style={styles.cardDivider} />
+                  <View style={styles.cardBottom}>
+                    <View style={styles.serviceIcon}>
+                      <Text style={styles.serviceIconText}>ADF</Text>
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.appointmentService}>{b.service}</Text>
+                      <Text style={styles.appointmentMeta}>{b.barber} · {b.date} · {b.time}</Text>
+                      <Text style={styles.appointmentMeta}>{b.price} · {b.status}</Text>
+                    </View>
+                  </View>
+                </View>
+              ));
+            })()}
+          </>
+        )}
+
+        {/* ── Cancellations (admin only) ── */}
+        {section === "cancellations" && isAdmin && (
+          <>
+            <Text style={[styles.appointmentService, { marginBottom: 12 }]}>
+              Total cancellations: {allCancellations.length}
+            </Text>
+            {allCancellations.length === 0 ? (
+              <Text style={styles.emptyText}>No cancellations yet.</Text>
+            ) : (
+              allCancellations.map((c) => (
+                <View key={c.id} style={styles.appointmentCard}>
+                  <View style={styles.cardTop}>
+                    <Text style={styles.appointmentDate}>{c.service}</Text>
+                    <Text style={styles.appointmentTime}>ID: {c.bookingId}</Text>
+                  </View>
+                  <View style={styles.cardDivider} />
+                  <View style={styles.cardBottom}>
+                    <View style={styles.serviceIcon}>
+                      <Text style={styles.serviceIconText}>ADF</Text>
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.appointmentService}>{c.barber}</Text>
+                      <Text style={styles.appointmentMeta}>Was: {c.date} at {c.time}</Text>
+                      <Text style={styles.appointmentMeta}>
+                        Cancelled: {new Date(c.cancelledAt).toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </>
+        )}
+
+        {/* ── Reschedules (admin only) ── */}
+        {section === "reschedules" && isAdmin && (
+          <>
+            <Text style={[styles.appointmentService, { marginBottom: 12 }]}>
+              Total reschedules: {allReschedules.length}
+            </Text>
+            {allReschedules.length === 0 ? (
+              <Text style={styles.emptyText}>No reschedules yet.</Text>
+            ) : (
+              allReschedules.map((r) => (
+                <View key={r.id} style={styles.appointmentCard}>
+                  <View style={styles.cardTop}>
+                    <Text style={styles.appointmentDate}>{r.service}</Text>
+                    <Text style={styles.appointmentTime}>ID: {r.bookingId}</Text>
+                  </View>
+                  <View style={styles.cardDivider} />
+                  <View style={styles.cardBottom}>
+                    <View style={styles.serviceIcon}>
+                      <Text style={styles.serviceIconText}>ADF</Text>
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.appointmentService}>{r.barber}</Text>
+                      <Text style={styles.appointmentMeta}>New: {r.newDate} at {r.newTime}</Text>
+                      <Text style={styles.appointmentMeta}>
+                        Rescheduled: {new Date(r.rescheduledAt).toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -478,13 +774,35 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, justifyContent: "center", alignItems: "center",
   },
   avatarText: { color: "#fff", fontSize: 20, fontWeight: "800" },
-  userName: { color: COLORS.text, fontSize: 16, fontWeight: "800" },
+  // Photo picker in details section
+  photoPicker: {
+    alignSelf: "center", marginBottom: 20, position: "relative",
+  },
+  photoImage: {
+    width: 90, height: 90, borderRadius: 45,
+  },
+  photoPlaceholder: {
+    width: 90, height: 90, borderRadius: 45,
+    backgroundColor: COLORS.border,
+    justifyContent: "center", alignItems: "center",
+  },
+  photoPlaceholderText: { color: COLORS.subtext, fontSize: 11, marginTop: 4 },
+  photoEditBadge: {
+    position: "absolute", bottom: 2, right: 2,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: COLORS.primary, justifyContent: "center", alignItems: "center",
+    borderWidth: 2, borderColor: COLORS.card,
+  },  userName: { color: COLORS.text, fontSize: 16, fontWeight: "800" },
   userEmail: { color: COLORS.subtext, fontSize: 12, marginTop: 2 },
 
   // Section tabs
+  sectionTabsScroll: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    flexGrow: 0,
+  },
   sectionTabs: {
     flexDirection: "row",
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
     paddingHorizontal: 20,
   },
   sectionTab: { paddingVertical: 12, paddingHorizontal: 14, marginRight: 4 },

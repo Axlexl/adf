@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { addDoc, collection } from "firebase/firestore";
-import { useState } from "react";
+import { addDoc, collection, doc, getDoc, setDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     SafeAreaView,
@@ -33,6 +33,23 @@ export default function Details() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; phone?: string; email?: string }>({});
 
+  // Pre-fill from saved user profile
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    getDoc(doc(db, "users", uid)).then((snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        if (d.fullName) setFullName(d.fullName);
+        if (d.phone) setPhone(d.phone);
+        if (d.address) setAddress(d.address);
+        if (d.city) setCity(d.city);
+        if (d.province) setProvince(d.province);
+        if (d.postalCode) setPostalCode(d.postalCode);
+      }
+    });
+  }, []);
+
   async function handleConfirm() {
     const newErrors: { fullName?: string; phone?: string; email?: string } = {};
     if (!fullName.trim()) newErrors.fullName = "Required";
@@ -47,16 +64,29 @@ export default function Details() {
     setLoading(true);
 
     const bookingId = Math.random().toString(36).substring(2, 9).toUpperCase();
+    const uid = auth.currentUser?.uid ?? null;
+    const now = new Date().toISOString();
 
+    // Save booking
     addDoc(collection(db, "bookings"), {
-      bookingId,
-      service, price, duration, barber, date, time,
+      bookingId, service, price, duration, barber, date, time,
       fullName, phone, email, address, city, province, postalCode, comments,
-      uid: auth.currentUser?.uid ?? null,
-      status: "confirmed",
-      isoDate: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    }).catch((err) => console.warn("Firestore save failed:", err));
+      uid, status: "confirmed", isoDate: now, createdAt: now,
+    }).catch((err) => console.warn("Firestore bookings failed:", err));
+
+    // Save/update user profile
+    if (uid) {
+      setDoc(doc(db, "users", uid), {
+        fullName, phone, email, address, city, province, postalCode,
+        uid, updatedAt: now,
+      }, { merge: true }).catch((err) => console.warn("Firestore users failed:", err));
+    }
+
+    // Save transaction
+    addDoc(collection(db, "transactions"), {
+      bookingId, uid, service, price, barber, date, time,
+      fullName, status: "confirmed", createdAt: now,
+    }).catch((err) => console.warn("Firestore transactions failed:", err));
 
     router.replace({
       pathname: "/categories/confirmed" as any,

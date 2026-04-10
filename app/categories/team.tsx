@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { addDoc, collection, onSnapshot } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
     SafeAreaView,
     ScrollView,
@@ -9,62 +11,39 @@ import {
     View,
 } from "react-native";
 import { COLORS } from "../../constants/colors";
+import { db } from "../../services/firebase";
 
-const teamMembers = [
-  {
-    name: "Nat Nat",
-    role: "Barber Artist",
-    description:
-      "Catch me up at ADF MAIN, ALT building Vinzon Street Obrero Davao City",
-    initials: "N",
-  },
-  {
-    name: "Kharel Patentis",
-    role: "SENIOR BARBER",
-    description:
-      "I am located at NEW MAIN ADF located ALT Building Vinzon Street Obrero Davao City",
-    initials: "K",
-  },
-  {
-    name: "Elmar",
-    role: "Barber Artist",
-    description: "ALLDAYFADE main alt bldg. vinzon obrero davao city",
-    initials: "E",
-  },
-  {
-    name: "Barber Jm",
-    role: "Barber Artist",
-    description: "Visit me at ALLDAYFADE for the freshest fades and styling.",
-    initials: "B",
-  },
-  {
-    name: "Kenneth",
-    role: "Barber Artist",
-    description:
-      "Available at ALLDAYFADE main branch, Vinzon Street Obrero Davao City.",
-    initials: "K",
-  },
-  {
-    name: "Evad",
-    role: "Barber Artist",
-    description: "Book your appointment at ALLDAYFADE and get a clean fade.",
-    initials: "E",
-  },
-  {
-    name: "Carl",
-    role: "Barber Artist",
-    description: "Find me at ALLDAYFADE on Vinzon Street for a sharp new look.",
-    initials: "C",
-  },
-  {
-    name: "Jake",
-    role: "Barber Artist",
-    description: "Stop by ALLDAYFADE for expert cuts and fade styles.",
-    initials: "J",
-  },
+type Member = { id: string; name: string; role: string; description: string };
+
+const DEFAULT_TEAM: Omit<Member, "id">[] = [
+  { name: "Nat Nat", role: "Barber Artist", description: "Catch me up at ADF MAIN, ALT building Vinzon Street Obrero Davao City" },
+  { name: "Kharel Patentis", role: "Senior Barber", description: "I am located at NEW MAIN ADF located ALT Building Vinzon Street Obrero Davao City" },
+  { name: "Elmar", role: "Barber Artist", description: "ALLDAYFADE main alt bldg. vinzon obrero davao city" },
+  { name: "Barber Jm", role: "Barber Artist", description: "Visit me at ALLDAYFADE for the freshest fades and styling." },
+  { name: "Carl", role: "Barber Artist", description: "Find me at ALLDAYFADE on Vinzon Street for a sharp new look." },
+  { name: "Jake", role: "Barber Artist", description: "Stop by ALLDAYFADE for expert cuts and fade styles." },
 ];
 
 export default function Team() {
+  const [teamMembers, setTeamMembers] = useState<Member[]>([]);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, "team"), (snap) => {
+      if (snap.empty) {
+        DEFAULT_TEAM.forEach((m) =>
+          addDoc(collection(db, "team"), m).catch(() => {})
+        );
+        setTeamMembers(DEFAULT_TEAM.map((m, i) => ({ id: String(i), ...m })));
+      } else {
+        setTeamMembers(
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<Member, "id">) }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+      }
+    });
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -80,10 +59,10 @@ export default function Team() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {teamMembers.map((member) => (
-          <View key={member.name} style={styles.card}>
+          <View key={member.id} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{member.initials}</Text>
+                <Text style={styles.avatarText}>{member.name.charAt(0)}</Text>
               </View>
               <View style={styles.cardTitle}>
                 <Text style={styles.cardName}>{member.name}</Text>

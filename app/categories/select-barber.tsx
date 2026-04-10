@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { collection, onSnapshot, query } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
-  Alert, SafeAreaView,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,30 +11,38 @@ import {
   View
 } from "react-native";
 import { COLORS } from "../../constants/colors";
+import { db } from "../../services/firebase";
 
-const barbers = [
-  { name: "Nat Nat", role: "Barber Artist" },
-  { name: "Kharel Patentis", role: "Senior Barber" },
-  { name: "Elmar", role: "Barber Artist" },
-  { name: "Barber Jm", role: "Barber Artist" },
-  { name: "Carl", role: "Barber Artist" },
-  { name: "Jake", role: "Barber Artist" },
-];
+type Barber = { id: string; name: string; role: string };
+type Schedule = { barberId: string; date: string; takenSlots: string[]; availableSlots: string[] };
 
 export default function SelectBarber() {
   const { service, price, duration } = useLocalSearchParams<{
-    service: string;
-    price: string;
-    duration: string;
+    service: string; price: string; duration: string;
   }>();
+
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  function handleBook() {
-    if (selectedIndex === null) {
-      Alert.alert("Select a barber", "Please choose a barber before booking.");
-      return;
-    }
+  const today = new Date().toISOString().split("T")[0];
 
+  useEffect(() => {
+    const unsubBarbers = onSnapshot(query(collection(db, "team")), (snap) => {
+      setBarbers(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Barber, "id">) })));
+    });
+    const unsubSchedules = onSnapshot(query(collection(db, "barber_schedules")), (snap) => {
+      setSchedules(snap.docs.map((d) => d.data() as Schedule));
+    });
+    return () => { unsubBarbers(); unsubSchedules(); };
+  }, []);
+
+  function getScheduleForBarber(barberName: string) {
+    return schedules.find((s) => s.barberId === barberName && s.date === today);
+  }
+
+  function handleBook() {
+    if (selectedIndex === null) return;
     const barber = barbers[selectedIndex];
     router.push({
       pathname: "/categories/booking",
@@ -57,9 +66,12 @@ export default function SelectBarber() {
       <ScrollView contentContainerStyle={styles.content}>
         {barbers.map((barber, index) => {
           const selected = selectedIndex === index;
+          const schedule = getScheduleForBarber(barber.name);
+          const takenCount = schedule?.takenSlots?.length ?? 0;
+          const availableCount = schedule?.availableSlots?.length ?? 0;
           return (
             <TouchableOpacity
-              key={barber.name}
+              key={barber.id}
               style={[styles.barberCard, selected && styles.barberCardSelected]}
               activeOpacity={0.9}
               onPress={() => setSelectedIndex(index)}
@@ -70,6 +82,13 @@ export default function SelectBarber() {
               <View style={styles.barberInfo}>
                 <Text style={styles.barberName}>{barber.name}</Text>
                 <Text style={styles.barberRole}>{barber.role}</Text>
+                {schedule ? (
+                  <Text style={styles.scheduleText}>
+                    {availableCount} slot{availableCount !== 1 ? "s" : ""} available today · {takenCount} taken
+                  </Text>
+                ) : (
+                  <Text style={styles.scheduleText}>Schedule not set</Text>
+                )}
               </View>
               <Text style={styles.selectText}>
                 {selected ? "Selected" : "Choose"}
@@ -93,7 +112,7 @@ export default function SelectBarber() {
 
           {selectedIndex !== null && (
             <>
-              <View style={styles.summaryRow} >
+              <View style={styles.summaryRow}>
                 <View>
                   <Text style={styles.summaryServiceName}>{barbers[selectedIndex].name}</Text>
                   <Text style={styles.summaryDuration}>{barbers[selectedIndex].role}</Text>
@@ -235,6 +254,11 @@ const styles = StyleSheet.create({
   barberRole: {
     color: COLORS.subtext,
     fontSize: 14,
+    marginTop: 4,
+  },
+  scheduleText: {
+    color: COLORS.subtext,
+    fontSize: 12,
     marginTop: 4,
   },
   selectText: {

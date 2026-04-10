@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -108,6 +108,17 @@ export default function Booking() {
           status: "confirmed",
           rescheduledAt: new Date().toISOString(),
         });
+
+        // Log to reschedules collection
+        addDoc(collection(db, "reschedules"), {
+          bookingId: rescheduleId,
+          uid: rescheduleEmail ?? null,
+          service, barber,
+          oldDate: "previous",
+          newDate,
+          newTime: selectedTime,
+          rescheduledAt: new Date().toISOString(),
+        }).catch(() => {});
 
         Alert.alert(
           "Rescheduled",
