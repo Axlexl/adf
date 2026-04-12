@@ -47,29 +47,35 @@ export default function Team() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.push("/home")}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push("/home")}>
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Team</Text>
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.heroTag}>MEET THE ARTISTS</Text>
+        <Text style={styles.heroTitle}>Our{"\n"}Barbers</Text>
+        <View style={styles.goldLine} />
+
         {teamMembers.map((member) => (
           <View key={member.id} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{member.name.charAt(0)}</Text>
               </View>
-              <View style={styles.cardTitle}>
+              <View style={styles.cardInfo}>
                 <Text style={styles.cardName}>{member.name}</Text>
-                <Text style={styles.cardRole}>{member.role}</Text>
+                <View style={styles.roleBadge}>
+                  <Text style={styles.cardRole}>{member.role}</Text>
+                </View>
               </View>
             </View>
-            <Text style={styles.cardDescription}>{member.description}</Text>
+            <View style={styles.descRow}>
+              <View style={styles.descLine} />
+              <Text style={styles.cardDescription}>{member.description}</Text>
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -78,69 +84,38 @@ export default function Team() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16,
   },
   backButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.card, justifyContent: "center", alignItems: "center" },
-  pageTitle: {
-    color: COLORS.text,
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  placeholder: {
-    width: 48,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
+  pageTitle: { color: COLORS.text, fontSize: 18, fontWeight: "bold" },
+  placeholder: { width: 48 },
+  content: { paddingHorizontal: 20, paddingBottom: 40 },
+  heroTag: { color: COLORS.primary, fontSize: 11, fontWeight: "700", letterSpacing: 4, marginBottom: 8 },
+  heroTitle: { color: COLORS.text, fontSize: 34, fontWeight: "900", lineHeight: 40, marginBottom: 16 },
+  goldLine: { width: 50, height: 2, backgroundColor: COLORS.primary, borderRadius: 2, marginBottom: 24 },
   card: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
+    backgroundColor: COLORS.card, borderRadius: 16, padding: 18,
+    marginBottom: 14, borderWidth: 1, borderColor: COLORS.border,
   },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
+  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 14 },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.border,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: COLORS.primary, justifyContent: "center",
+    alignItems: "center", marginRight: 14,
   },
-  avatarText: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "700",
+  avatarText: { color: COLORS.background, fontSize: 20, fontWeight: "900" },
+  cardInfo: { flex: 1 },
+  cardName: { color: COLORS.text, fontSize: 16, fontWeight: "700", marginBottom: 6 },
+  roleBadge: {
+    alignSelf: "flex-start", backgroundColor: "#1e1a0e",
+    borderWidth: 1, borderColor: COLORS.primary,
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20,
   },
-  cardTitle: {
-    flex: 1,
-  },
-  cardName: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  cardRole: {
-    color: COLORS.subtext,
-    marginTop: 2,
-  },
-  cardDescription: {
-    color: COLORS.subtext,
-    lineHeight: 20,
-  },
+  cardRole: { color: COLORS.primary, fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  descRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  descLine: { width: 2, borderRadius: 2, backgroundColor: COLORS.primary, alignSelf: "stretch" },
+  cardDescription: { color: COLORS.subtext, fontSize: 13, lineHeight: 20, flex: 1 },
 });

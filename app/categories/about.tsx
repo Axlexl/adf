@@ -27,91 +27,93 @@ export default function About() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.push("/home")}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push("/home")}>
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>About</Text>
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>About</Text>
-        <Text style={styles.text}>local barbershop in Davao City!</Text>
-        <Text style={styles.text}>
-          ALLDAYFADE 3 branches ALT building Vinzon Street Obrero Davao City
-        </Text>
-        <Text style={styles.text}>
-          Sta ana ave infront of aisat building Davao City
-        </Text>
-        <Text style={styles.text}>Medalla Buhangin Davao City</Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.heroTag}>OUR STORY</Text>
+        <Text style={styles.heroTitle}>About{"\n"}AllDayFade</Text>
+        <View style={styles.goldLine} />
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact us</Text>
-          <TouchableOpacity
-            onPress={() => openLink("mailto:alldayfade@gmail.com")}
-          >
-            <Text style={styles.link}>alldayfade@gmail.com</Text>
+        {/* About card */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>WHO WE ARE</Text>
+          <Text style={styles.cardText}>
+            AllDayFade is a premium local barbershop in Davao City, dedicated to delivering sharp cuts, clean fades, and top-tier grooming services.
+          </Text>
+        </View>
+
+        {/* Branches */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>OUR BRANCHES</Text>
+          {[
+            "ALT Building, Vinzon Street Obrero, Davao City",
+            "Sta. Ana Ave., in front of AISAT Building, Davao City",
+            "Medalla, Buhangin, Davao City",
+          ].map((branch, i) => (
+            <View key={i} style={styles.branchRow}>
+              <Ionicons name="location" size={14} color={COLORS.primary} />
+              <Text style={styles.branchText}>{branch}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Contact */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>CONTACT US</Text>
+          <TouchableOpacity style={styles.contactRow} onPress={() => openLink("mailto:alldayfade@gmail.com")}>
+            <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.contactText}>alldayfade@gmail.com</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => openLink("https://tiktok.com/alldayfade")}
-          >
-            <Text style={styles.link}>https://tiktok.com/alldayfade</Text>
+          <TouchableOpacity style={styles.contactRow} onPress={() => openLink("https://tiktok.com/alldayfade")}>
+            <Ionicons name="logo-tiktok" size={16} color={COLORS.primary} />
+            <Text style={styles.contactText}>tiktok.com/alldayfade</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Good to know</Text>
-          <TouchableOpacity onPress={() => setPolicyVisible(true)}>
-            <Text style={styles.link}>Booking policy</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Social media</Text>
+        {/* Social */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>FOLLOW US</Text>
           <View style={styles.socialRow}>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => openLink("https://www.instagram.com/alldayfade")}
-            >
-              <Text style={styles.socialIcon}>📸</Text>
+            <TouchableOpacity style={styles.socialBtn} onPress={() => openLink("https://www.instagram.com/alldayfade")}>
+              <Ionicons name="logo-instagram" size={22} color={COLORS.primary} />
+              <Text style={styles.socialLabel}>Instagram</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => openLink("https://www.facebook.com/alldayfade")}
-            >
-              <Text style={styles.socialIcon}>f</Text>
+            <TouchableOpacity style={styles.socialBtn} onPress={() => openLink("https://www.facebook.com/alldayfade")}>
+              <Ionicons name="logo-facebook" size={22} color={COLORS.primary} />
+              <Text style={styles.socialLabel}>Facebook</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Policy */}
+        <TouchableOpacity style={styles.policyBtn} onPress={() => setPolicyVisible(true)}>
+          <Ionicons name="document-text-outline" size={16} color={COLORS.primary} />
+          <Text style={styles.policyBtnText}>View Booking Policy</Text>
+          <Ionicons name="chevron-forward" size={14} color={COLORS.subtext} />
+        </TouchableOpacity>
       </ScrollView>
 
-      <Modal
-        animationType="fade"
-        transparent
-        visible={policyVisible}
-        onRequestClose={() => setPolicyVisible(false)}
-      >
+      <Modal animationType="fade" transparent visible={policyVisible} onRequestClose={() => setPolicyVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Our Booking Policy</Text>
+            <View style={styles.modalTopAccent} />
+            <Text style={styles.modalTitle}>Booking Policy</Text>
             <Text style={styles.modalText}>
-              Please choose your service accordingly to our cut especially to
-              "Long to Short" and etc. Be at exact time of your bookings.
+              Please choose your service accordingly to our cut especially "Long to Short" etc. Be at exact time of your bookings.
             </Text>
             <View style={styles.modalBox}>
+              <Text style={styles.modalBoxLabel}>CANCELLATION</Text>
               <Text style={styles.modalBoxText}>
-                Cancellation policy You can cancel or reschedule up to 6 hours
-                before the appointment time.
+                You can cancel or reschedule up to 6 hours before the appointment time.
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setPolicyVisible(false)}
-            >
-              <Text style={styles.modalButtonText}>Okay</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={() => setPolicyVisible(false)}>
+              <Text style={styles.modalButtonText}>Got it</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -121,120 +123,49 @@ export default function About() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16,
   },
   backButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.card, justifyContent: "center", alignItems: "center" },
-  pageTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "bold",
+  pageTitle: { color: COLORS.text, fontSize: 18, fontWeight: "bold" },
+  placeholder: { width: 48 },
+  content: { paddingHorizontal: 20, paddingBottom: 40 },
+  heroTag: { color: COLORS.primary, fontSize: 11, fontWeight: "700", letterSpacing: 4, marginBottom: 8 },
+  heroTitle: { color: COLORS.text, fontSize: 34, fontWeight: "900", lineHeight: 40, marginBottom: 16 },
+  goldLine: { width: 50, height: 2, backgroundColor: COLORS.primary, borderRadius: 2, marginBottom: 24 },
+  card: {
+    backgroundColor: COLORS.card, borderRadius: 16, padding: 18,
+    marginBottom: 12, borderWidth: 1, borderColor: COLORS.border,
   },
-  placeholder: {
-    width: 48,
+  cardLabel: { color: COLORS.primary, fontSize: 10, fontWeight: "700", letterSpacing: 3, marginBottom: 12 },
+  cardText: { color: COLORS.subtext, fontSize: 14, lineHeight: 22 },
+  branchRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 10 },
+  branchText: { color: COLORS.text, fontSize: 13, lineHeight: 20, flex: 1 },
+  contactRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  contactText: { color: COLORS.text, fontSize: 14, textDecorationLine: "underline" },
+  socialRow: { flexDirection: "row", gap: 12 },
+  socialBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: COLORS.background, borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
+  socialLabel: { color: COLORS.text, fontSize: 13, fontWeight: "600" },
+  policyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: COLORS.card, borderRadius: 14, padding: 16,
+    borderWidth: 1, borderColor: COLORS.border, marginBottom: 8,
   },
-  title: {
-    color: COLORS.text,
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  section: {
-    marginTop: 24,
-  },
-  sectionTitle: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  text: {
-    color: COLORS.subtext,
-    fontSize: 15,
-    lineHeight: 24,
-    marginBottom: 10,
-  },
-  link: {
-    color: COLORS.text,
-    fontSize: 15,
-    marginBottom: 8,
-    textDecorationLine: "underline",
-  },
-  socialRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 12,
-  },
-  socialButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 18,
-    backgroundColor: COLORS.card,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  socialIcon: {
-    fontSize: 22,
-    color: COLORS.text,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    width: "100%",
-    backgroundColor: COLORS.card,
-    borderRadius: 24,
-    padding: 24,
-  },
-  modalTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-  modalText: {
-    color: COLORS.subtext,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  modalBox: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  modalBoxText: {
-    color: COLORS.text,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  modalButton: {
-    borderWidth: 1,
-    borderColor: COLORS.text,
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: "center",
-  },
-  modalButtonText: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: "700",
-  },
+  policyBtnText: { color: COLORS.text, fontSize: 14, fontWeight: "600", flex: 1 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "center", alignItems: "center", padding: 24 },
+  modalContent: { width: "100%", backgroundColor: COLORS.card, borderRadius: 24, overflow: "hidden" },
+  modalTopAccent: { height: 3, backgroundColor: COLORS.primary },
+  modalTitle: { color: COLORS.text, fontSize: 18, fontWeight: "700", margin: 24, marginBottom: 12 },
+  modalText: { color: COLORS.subtext, fontSize: 14, lineHeight: 22, marginHorizontal: 24, marginBottom: 16 },
+  modalBox: { backgroundColor: "#1a1500", borderRadius: 12, padding: 16, marginHorizontal: 24, marginBottom: 24, borderWidth: 1, borderColor: COLORS.primary },
+  modalBoxLabel: { color: COLORS.primary, fontSize: 10, fontWeight: "700", letterSpacing: 2, marginBottom: 8 },
+  modalBoxText: { color: COLORS.text, fontSize: 13, lineHeight: 20 },
+  modalButton: { backgroundColor: COLORS.primary, paddingVertical: 16, alignItems: "center", margin: 24, marginTop: 0, borderRadius: 14 },
+  modalButtonText: { color: COLORS.background, fontSize: 15, fontWeight: "800", letterSpacing: 1 },
 });
