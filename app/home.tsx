@@ -88,9 +88,7 @@ export default function Home() {
 
         <View style={styles.logoContainer}>
           <Image
-            source={{
-              uri: "https://img.freepik.com/premium-vector/adf-creative-abstract-alphabet-modern-minimal-letter-initial-business-symbol-icon-vector-logo_1237311-3286.jpg",
-            }}
+            source={require("../assets/images/adf3.png")}
             style={styles.logoImage}
             resizeMode="cover"
           />
