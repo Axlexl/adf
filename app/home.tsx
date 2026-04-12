@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -10,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { COLORS } from "../constants/colors";
-import { auth } from "../services/firebase";
+import { auth, db } from "../services/firebase";
 
 const ADMIN_EMAIL = "admin@alldayfade.com";
 
@@ -29,16 +31,40 @@ const navItems = [
 export default function Home() {
   const isAdmin = auth.currentUser?.email === ADMIN_EMAIL;
   const pathname = usePathname();
+  const [displayName, setDisplayName] = useState("");
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+    if (isAdmin) {
+      setDisplayName("Admin");
+      return;
+    }
+    // Try to get saved full name from users collection
+    getDoc(doc(db, "users", user.uid)).then((snap) => {
+      if (snap.exists() && snap.data().fullName) {
+        setDisplayName(snap.data().fullName.split(" ")[0]); // first name only
+      } else {
+        setDisplayName(user.email?.split("@")[0] ?? "");
+      }
+    }).catch(() => {
+      setDisplayName(user.email?.split("@")[0] ?? "");
+    });
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>ALLDAYFADE</Text>
-          {isAdmin && (
+          {isAdmin ? (
             <TouchableOpacity style={styles.adminBtn} onPress={() => router.push("/admin" as any)}>
               <Text style={styles.adminBtnText}>Admin</Text>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.greetingBadge}>
+              <Text style={styles.greetingText} numberOfLines={1}>{displayName}</Text>
+            </View>
           )}
         </View>
 
@@ -129,6 +155,18 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 13,
     fontWeight: "700",
+  },
+  greetingBadge: {
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    maxWidth: 120,
+  },
+  greetingText: {
+    color: COLORS.subtext,
+    fontSize: 13,
+    fontWeight: "600",
   },
   profileButton: {
     width: 44,
