@@ -11,16 +11,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { COLORS } from "../constants/colors";
 import { auth, db } from "../services/firebase";
 
 const ADMIN_EMAIL = "admin@alldayfade.com";
+const GOLD = "#C9A84C";
+const DARK = "#0A0A0A";
+const CARD = "#111111";
+const BORDER = "#222222";
 
 const categories = [
-  { label: "SERVICE", route: "/categories/service" },
-  { label: "TEAM", route: "/categories/team" },
-  { label: "ABOUT", route: "/categories/about" },
-  { label: "ADDRESS", route: "/categories/address" },
+  { label: "Services", sub: "View all services", icon: "cut-outline", route: "/categories/service" },
+  { label: "Our Team", sub: "Meet the barbers", icon: "people-outline", route: "/categories/team" },
+  { label: "About", sub: "Our story", icon: "information-circle-outline", route: "/categories/about" },
+  { label: "Address", sub: "Find us", icon: "location-outline", route: "/categories/address" },
 ] as const;
 
 const navItems = [
@@ -36,65 +39,96 @@ export default function Home() {
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
-    if (isAdmin) {
-      setDisplayName("Admin");
-      return;
-    }
-    // Try to get saved full name from users collection
+    if (isAdmin) { setDisplayName("Admin"); return; }
     getDoc(doc(db, "users", user.uid)).then((snap) => {
       if (snap.exists() && snap.data().fullName) {
-        setDisplayName(snap.data().fullName.split(" ")[0]); // first name only
+        setDisplayName(snap.data().fullName.split(" ")[0]);
       } else {
         setDisplayName(user.email?.split("@")[0] ?? "");
       }
-    }).catch(() => {
-      setDisplayName(user.email?.split("@")[0] ?? "");
-    });
+    }).catch(() => setDisplayName(user.email?.split("@")[0] ?? ""));
   }, []);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>ALLDAYFADE</Text>
+          <View>
+            <Text style={styles.brandSmall}>WELCOME TO</Text>
+            <Text style={styles.brand}>ALLDAYFADE</Text>
+          </View>
           {isAdmin ? (
-            <TouchableOpacity style={styles.adminBtn} onPress={() => router.push("/admin" as any)}>
-              <Text style={styles.adminBtnText}>Admin</Text>
+            <TouchableOpacity style={styles.adminBadge} onPress={() => router.push("/admin" as any)}>
+              <Ionicons name="settings-outline" size={14} color={GOLD} />
+              <Text style={styles.adminBadgeText}>Admin</Text>
             </TouchableOpacity>
-          ) : (
+          ) : displayName ? (
             <View style={styles.greetingBadge}>
-              <Text style={styles.greetingText} numberOfLines={1}>{displayName}</Text>
+              <Text style={styles.greetingText}>{displayName}</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
-        <Text style={styles.subtitle}>
-          A well-groomed man is a confident man.
-        </Text>
-
-        <Text style={styles.sectionTitle}>Categories</Text>
-
-        <View style={styles.categories}>
-          {categories.map((category) => (
+        {/* ── Hero banner ── */}
+        <View style={styles.heroBanner}>
+          <Image
+            source={{ uri: "https://img.freepik.com/premium-vector/adf-creative-abstract-alphabet-modern-minimal-letter-initial-business-symbol-icon-vector-logo_1237311-3286.jpg" }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroTag}>PREMIUM BARBERSHOP</Text>
+            <Text style={styles.heroTitle}>Sharp Cuts.{"\n"}Clean Fades.</Text>
             <TouchableOpacity
-              key={category.label}
-              style={styles.categoryCard}
-              onPress={() => router.push(category.route)}
+              style={styles.heroBtn}
+              onPress={() => router.push("/categories/service")}
+              activeOpacity={0.85}
             >
-              <Text style={styles.categoryText}>{category.label}</Text>
+              <Text style={styles.heroBtnText}>Book Now</Text>
+              <Ionicons name="arrow-forward" size={14} color={DARK} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ── Tagline ── */}
+        <Text style={styles.tagline}>A well-groomed man is a confident man.</Text>
+
+        {/* ── Section title ── */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.goldLine} />
+          <Text style={styles.sectionTitle}>EXPLORE</Text>
+          <View style={styles.goldLine} />
+        </View>
+
+        {/* ── Category grid ── */}
+        <View style={styles.grid}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat.label}
+              style={styles.gridCard}
+              onPress={() => router.push(cat.route)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.gridIconWrapper}>
+                <Ionicons name={cat.icon as any} size={26} color={GOLD} />
+              </View>
+              <Text style={styles.gridLabel}>{cat.label}</Text>
+              <Text style={styles.gridSub}>{cat.sub}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("../assets/images/adf3.png")}
-            style={styles.logoImage}
-            resizeMode="cover"
-          />
+        {/* ── Footer quote ── */}
+        <View style={styles.quoteBox}>
+          <Text style={styles.quoteText}>"Your style. Your identity."</Text>
+          <Text style={styles.quoteBrand}>— AllDayFade</Text>
         </View>
+
       </ScrollView>
 
+      {/* ── Navbar ── */}
       <View style={styles.navbar}>
         {navItems.map((item) => {
           const active = pathname === item.route;
@@ -107,8 +141,8 @@ export default function Home() {
             >
               <Ionicons
                 name={active ? item.iconActive : item.icon}
-                size={26}
-                color={active ? COLORS.text : COLORS.subtext}
+                size={24}
+                color={active ? GOLD : "#555"}
               />
               <Text style={[styles.navText, active && styles.navTextActive]}>
                 {item.label}
@@ -122,174 +156,98 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 110,
-  },
+  container: { flex: 1, backgroundColor: DARK },
+  content: { paddingBottom: 100 },
+
+  // Header
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16,
   },
-  title: {
-    color: COLORS.text,
-    fontSize: 28,
-    fontWeight: "bold",
+  brandSmall: { color: GOLD, fontSize: 10, fontWeight: "700", letterSpacing: 4 },
+  brand: { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: 3 },
+  adminBadge: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderWidth: 1, borderColor: GOLD,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
   },
-  adminBtn: {
-    backgroundColor: COLORS.card,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  adminBtnText: {
-    color: COLORS.text,
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  adminBadgeText: { color: GOLD, fontSize: 12, fontWeight: "700" },
   greetingBadge: {
-    backgroundColor: COLORS.card,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    maxWidth: 120,
+    borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
   },
-  greetingText: {
-    color: COLORS.subtext,
-    fontSize: 13,
-    fontWeight: "600",
+  greetingText: { color: "#888", fontSize: 12, fontWeight: "600" },
+
+  // Hero
+  heroBanner: {
+    marginHorizontal: 24, borderRadius: 20, overflow: "hidden",
+    height: 220, marginBottom: 20,
   },
-  profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    backgroundColor: COLORS.card,
-    justifyContent: "center",
-    alignItems: "center",
+  heroImage: { width: "100%", height: "100%", position: "absolute" },
+  heroOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 24, justifyContent: "flex-end",
   },
-  profileText: {
-    color: COLORS.text,
-    fontSize: 18,
+  heroTag: { color: GOLD, fontSize: 10, fontWeight: "700", letterSpacing: 3, marginBottom: 6 },
+  heroTitle: { color: "#fff", fontSize: 26, fontWeight: "900", lineHeight: 32, marginBottom: 16 },
+  heroBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: GOLD, paddingVertical: 10, paddingHorizontal: 20,
+    borderRadius: 30, alignSelf: "flex-start",
   },
-  subtitle: {
-    color: COLORS.subtext,
-    fontSize: 16,
-    marginBottom: 20,
+  heroBtnText: { color: DARK, fontSize: 13, fontWeight: "800" },
+
+  // Tagline
+  tagline: {
+    color: "#555", fontSize: 13, textAlign: "center",
+    fontStyle: "italic", marginBottom: 28, paddingHorizontal: 24,
   },
-  searchBox: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    marginBottom: 20,
+
+  // Section header
+  sectionHeader: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 24, marginBottom: 16, gap: 12,
   },
-  searchInput: {
-    height: 48,
-    color: COLORS.text,
+  goldLine: { flex: 1, height: 1, backgroundColor: BORDER },
+  sectionTitle: { color: GOLD, fontSize: 11, fontWeight: "800", letterSpacing: 4 },
+
+  // Grid
+  grid: {
+    flexDirection: "row", flexWrap: "wrap",
+    paddingHorizontal: 16, gap: 12, marginBottom: 28,
   },
-  sectionTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
+  gridCard: {
+    width: "47%", backgroundColor: CARD,
+    borderRadius: 16, padding: 20,
+    borderWidth: 1, borderColor: BORDER,
   },
-  categories: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginBottom: 20,
+  gridIconWrapper: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: "#1a1a1a", justifyContent: "center",
+    alignItems: "center", marginBottom: 12,
+    borderWidth: 1, borderColor: "#2a2a2a",
   },
-  categoryCard: {
-    width: "48%",
-    backgroundColor: COLORS.card,
-    borderRadius: 18,
-    paddingVertical: 18,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    marginBottom: 12,
+  gridLabel: { color: "#fff", fontSize: 14, fontWeight: "700", marginBottom: 4 },
+  gridSub: { color: "#555", fontSize: 11 },
+
+  // Quote
+  quoteBox: {
+    marginHorizontal: 24, padding: 24,
+    borderTopWidth: 1, borderBottomWidth: 1, borderColor: BORDER,
+    alignItems: "center", marginBottom: 8,
   },
-  categoryText: {
-    color: COLORS.text,
-    fontWeight: "600",
-  },
-  itemCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 22,
-    overflow: "hidden",
-  },
-  itemImagePlaceholder: {
-    height: 180,
-    backgroundColor: COLORS.border,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  itemImageText: {
-    color: COLORS.subtext,
-  },
-  itemInfo: {
-    padding: 16,
-  },
-  itemTag: {
-    color: COLORS.primary,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  itemTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  itemPrice: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  logoContainer: {
-    width: "100%",
-    height: 180,
-    borderRadius: 22,
-    overflow: "hidden",
-    marginBottom: 24,
-    backgroundColor: COLORS.border,
-  },
-  logoImage: {
-    width: "100%",
-    height: "100%",
-  },
+  quoteText: { color: "#666", fontSize: 15, fontStyle: "italic", textAlign: "center" },
+  quoteBrand: { color: GOLD, fontSize: 12, fontWeight: "700", marginTop: 8, letterSpacing: 2 },
+
+  // Navbar
   navbar: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 80,
-    backgroundColor: COLORS.card,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingBottom: 10,
+    position: "absolute", left: 0, right: 0, bottom: 0,
+    height: 72, backgroundColor: "#0d0d0d",
+    borderTopWidth: 1, borderTopColor: BORDER,
+    flexDirection: "row", justifyContent: "space-around",
+    alignItems: "center", paddingBottom: 8,
   },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    paddingVertical: 8,
-  },
-  navText: {
-    color: COLORS.subtext,
-    fontSize: 11,
-    marginTop: 3,
-  },
-  navTextActive: {
-    color: COLORS.text,
-    fontWeight: "600",
-  },
+  navItem: { alignItems: "center", justifyContent: "center", flex: 1, paddingVertical: 6 },
+  navText: { color: "#555", fontSize: 10, marginTop: 3, fontWeight: "600" },
+  navTextActive: { color: GOLD },
 });

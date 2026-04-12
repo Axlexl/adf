@@ -11,7 +11,7 @@ export default function Button({ title, onPress }: any) {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: COLORS.text,
+    backgroundColor: COLORS.primary,
     padding: 16,
     borderRadius: 12,
     marginTop: 20,

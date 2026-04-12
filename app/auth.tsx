@@ -76,9 +76,10 @@ export default function Index() {
         style={styles.container}
       >
         {/* TITLE */}
+        <Text style={styles.brandSmall}>PREMIUM BARBERSHOP</Text>
         <Text style={styles.title}>
           <Text style={{ color: COLORS.text }}>ALLDAY</Text>
-          <Text style={{ color: COLORS.text }}>FADE</Text>
+          <Text style={{ color: COLORS.primary }}>FADE</Text>
         </Text>
 
         <Text style={styles.subtitle}>Invest In Your Hair.</Text>
@@ -140,6 +141,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: "center",
+  },
+  brandSmall: {
+    color: COLORS.primary,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 4,
+    textAlign: "center",
+    marginBottom: 6,
   },
   title: {
     fontSize: 36,
