@@ -1,4 +1,5 @@
-import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { router, usePathname } from "expo-router";
 import {
   Image,
   SafeAreaView,
@@ -21,12 +22,13 @@ const categories = [
 ] as const;
 
 const navItems = [
-  { label: "Home", route: "/home" },
-  { label: "Profile", route: "/profile" },
+  { label: "Home", route: "/home", icon: "home" as const, iconActive: "home" as const },
+  { label: "Profile", route: "/profile", icon: "person-outline" as const, iconActive: "person" as const },
 ] as const;
 
 export default function Home() {
   const isAdmin = auth.currentUser?.email === ADMIN_EMAIL;
+  const pathname = usePathname();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -70,15 +72,26 @@ export default function Home() {
       </ScrollView>
 
       <View style={styles.navbar}>
-        {navItems.map((item) => (
-          <TouchableOpacity
-            key={item.label}
-            style={styles.navItem}
-            onPress={() => router.push(item.route)}
-          >
-            <Text style={styles.navText}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {navItems.map((item) => {
+          const active = pathname === item.route;
+          return (
+            <TouchableOpacity
+              key={item.label}
+              style={styles.navItem}
+              onPress={() => router.push(item.route)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={active ? item.iconActive : item.icon}
+                size={26}
+                color={active ? COLORS.text : COLORS.subtext}
+              />
+              <Text style={[styles.navText, active && styles.navTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </SafeAreaView>
   );
@@ -230,9 +243,17 @@ const styles = StyleSheet.create({
   },
   navItem: {
     alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    paddingVertical: 8,
   },
   navText: {
     color: COLORS.subtext,
-    fontSize: 12,
+    fontSize: 11,
+    marginTop: 3,
+  },
+  navTextActive: {
+    color: COLORS.text,
+    fontWeight: "600",
   },
 });
