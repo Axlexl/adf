@@ -60,8 +60,13 @@ export default function Admin() {
   const [reschedules, setReschedules] = useState<Reschedule[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Delete confirmation modal
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; collection: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Service modal
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [savingService, setSavingService] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [sTitle, setSTitle] = useState("");
   const [sDuration, setSDuration] = useState("");
@@ -84,6 +89,7 @@ export default function Admin() {
   const [schSlots, setSchSlots] = useState("");
   // Team modal
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [savingMember, setSavingMember] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [tName, setTName] = useState("");
   const [tRole, setTRole] = useState("");
@@ -166,25 +172,30 @@ export default function Admin() {
       Alert.alert("Required", "Title, duration and price are required.");
       return;
     }
-    const data = {
-      title: sTitle.trim(),
-      duration: sDuration.trim(),
-      price: sPrice.trim(),
-      details: sDetails.split("\n").map((l) => l.trim()).filter(Boolean),
-    };
-    if (editingService) {
-      await updateDoc(doc(db, "services", editingService.id), data);
-    } else {
-      await addDoc(collection(db, "services"), data);
+    setSavingService(true);
+    try {
+      const data = {
+        title: sTitle.trim(),
+        duration: sDuration.trim(),
+        price: sPrice.trim(),
+        details: sDetails.split("\n").map((l) => l.trim()).filter(Boolean),
+      };
+      if (editingService) {
+        await updateDoc(doc(db, "services", editingService.id), data);
+      } else {
+        await addDoc(collection(db, "services"), data);
+      }
+      setShowServiceModal(false);
+      Alert.alert("Success", editingService ? "Service updated." : "Service added.");
+    } catch (err) {
+      Alert.alert("Error", "Failed to save. Please try again.");
+    } finally {
+      setSavingService(false);
     }
-    setShowServiceModal(false);
   }
 
   function deleteService(s: Service) {
-    Alert.alert("Delete service", `Delete "${s.title}"?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteDoc(doc(db, "services", s.id)) },
-    ]);
+    setDeleteTarget({ id: s.id, name: s.title, collection: "services" });
   }
 
   // ── Team ──
@@ -205,20 +216,38 @@ export default function Admin() {
       Alert.alert("Required", "Name and role are required.");
       return;
     }
-    const data = { name: tName.trim(), role: tRole.trim(), description: tDesc.trim() };
-    if (editingMember) {
-      await updateDoc(doc(db, "team", editingMember.id), data);
-    } else {
-      await addDoc(collection(db, "team"), data);
+    setSavingMember(true);
+    try {
+      const data = { name: tName.trim(), role: tRole.trim(), description: tDesc.trim() };
+      if (editingMember) {
+        await updateDoc(doc(db, "team", editingMember.id), data);
+      } else {
+        await addDoc(collection(db, "team"), data);
+      }
+      setShowTeamModal(false);
+      Alert.alert("Success", editingMember ? "Member updated." : "Member added.");
+    } catch {
+      Alert.alert("Error", "Failed to save. Please try again.");
+    } finally {
+      setSavingMember(false);
     }
-    setShowTeamModal(false);
   }
 
   function deleteMember(m: Member) {
-    Alert.alert("Delete member", `Remove "${m.name}" from the team?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteDoc(doc(db, "team", m.id)) },
-    ]);
+    setDeleteTarget({ id: m.id, name: m.name, collection: "team" });
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, deleteTarget.collection, deleteTarget.id));
+      setDeleteTarget(null);
+    } catch {
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   // ── Schedules ──
@@ -499,8 +528,11 @@ export default function Admin() {
               <TouchableOpacity style={styles.cancelModalBtn} onPress={() => setShowServiceModal(false)}>
                 <Text style={styles.cancelModalText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveService}>
-                <Text style={styles.saveBtnText}>Save</Text>
+              <TouchableOpacity style={styles.saveBtn} onPress={saveService} disabled={savingService}>
+                {savingService
+                  ? <ActivityIndicator color={COLORS.background} size="small" />
+                  : <Text style={styles.saveBtnText}>Save</Text>
+                }
               </TouchableOpacity>
             </View>
           </View>
@@ -539,8 +571,46 @@ export default function Admin() {
               <TouchableOpacity style={styles.cancelModalBtn} onPress={() => setShowTeamModal(false)}>
                 <Text style={styles.cancelModalText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveMember}>
-                <Text style={styles.saveBtnText}>Save</Text>
+              <TouchableOpacity style={styles.saveBtn} onPress={saveMember} disabled={savingMember}>
+                {savingMember
+                  ? <ActivityIndicator color={COLORS.background} size="small" />
+                  : <Text style={styles.saveBtnText}>Save</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        visible={!!deleteTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteTarget(null)}
+      >
+        <View style={styles.deleteOverlay}>
+          <View style={styles.deleteCard}>
+            <Text style={styles.deleteTitle}>Delete "{deleteTarget?.name}"?</Text>
+            <Text style={styles.deleteBody}>
+              This will permanently remove it. This cannot be undone.
+            </Text>
+            <View style={styles.deleteActions}>
+              <TouchableOpacity
+                style={styles.deleteCancelBtn}
+                onPress={() => setDeleteTarget(null)}
+              >
+                <Text style={styles.deleteCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteConfirmBtn}
+                onPress={confirmDelete}
+                disabled={deleting}
+              >
+                {deleting
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.deleteConfirmText}>Yes, delete</Text>
+                }
               </TouchableOpacity>
             </View>
           </View>
@@ -603,4 +673,18 @@ const styles = StyleSheet.create({
   statusBtnActive: { backgroundColor: COLORS.text, borderColor: COLORS.text },
   statusBtnText: { color: COLORS.subtext, fontSize: 12 },
   statusBtnTextActive: { color: COLORS.background, fontWeight: "700" },
+  deleteOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center", alignItems: "center", padding: 24,
+  },
+  deleteCard: {
+    backgroundColor: COLORS.card, borderRadius: 20, padding: 24, width: "100%",
+  },
+  deleteTitle: { color: COLORS.text, fontSize: 16, fontWeight: "700", marginBottom: 10 },
+  deleteBody: { color: COLORS.subtext, fontSize: 13, lineHeight: 20, marginBottom: 24 },
+  deleteActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
+  deleteCancelBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
+  deleteCancelText: { color: COLORS.subtext, fontSize: 14 },
+  deleteConfirmBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, backgroundColor: COLORS.primary },
+  deleteConfirmText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 });

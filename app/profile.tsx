@@ -112,6 +112,7 @@ export default function Profile() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const latestBooking = bookings[0] ?? null;
@@ -203,22 +204,14 @@ export default function Profile() {
   const past = active.filter((b) => parseAppointmentDate(b.date, b.time).getTime() < now);
   const displayed = tab === "upcoming" ? upcoming : past;
 
-  async function handleLogout() {
-    Alert.alert(
-      "Log out",
-      "Do you want to log out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes, log out",
-          style: "destructive",
-          onPress: async () => {
-            await signOut(auth);
-            router.replace("/");
-          },
-        },
-      ]
-    );
+  function handleLogout() {
+    setShowLogoutModal(true);
+  }
+
+  async function confirmLogout() {
+    setShowLogoutModal(false);
+    await signOut(auth);
+    router.replace("/");
   }
 
   function handleCancel(booking: Booking) {
@@ -265,6 +258,8 @@ export default function Profile() {
         rescheduleId: booking.id,
         rescheduleEmail: booking.email ?? "",
         rescheduleFullName: booking.fullName ?? "",
+        oldDate: booking.date,
+        oldTime: booking.time,
       },
     });
   }
@@ -734,6 +729,31 @@ export default function Profile() {
             >
               <Text style={styles.yesCancelBtnText}>Done</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Logout confirmation modal ── */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.cancelOverlay}>
+          <View style={styles.cancelCard}>
+            <Text style={styles.cancelTitle}>Log out?</Text>
+            <Text style={styles.cancelBody}>
+              Are you sure you want to log out of your account?
+            </Text>
+            <View style={styles.cancelActions}>
+              <TouchableOpacity style={styles.keepBtn} onPress={() => setShowLogoutModal(false)}>
+                <Text style={styles.keepBtnText}>No, stay</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.yesCancelBtn} onPress={confirmLogout}>
+                <Text style={styles.yesCancelBtnText}>Yes, log out</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

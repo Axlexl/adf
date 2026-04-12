@@ -3,14 +3,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import { addDoc, collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { COLORS } from "../../constants/colors";
 import { db } from "../../services/firebase";
@@ -45,10 +45,11 @@ function buildCalendar(year: number, month: number) {
 }
 
 export default function Booking() {
-  const { service, price, duration, barber, rescheduleId, rescheduleEmail, rescheduleFullName } =
+  const { service, price, duration, barber, rescheduleId, rescheduleEmail, rescheduleFullName, oldDate, oldTime } =
     useLocalSearchParams<{
       service: string; price: string; duration: string; barber: string;
       rescheduleId?: string; rescheduleEmail?: string; rescheduleFullName?: string;
+      oldDate?: string; oldTime?: string;
     }>();
 
   const isReschedule = !!rescheduleId;
@@ -60,18 +61,28 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [takenSlots, setTakenSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showRescheduleSuccess, setShowRescheduleSuccess] = useState(false);
+  const [rescheduledTo, setRescheduledTo] = useState("");
 
   useEffect(() => {
     if (!selectedDate || !barber) return;
-    const dateStr = selectedDate.toISOString().split("T")[0];
+    const formattedDate = `${DAY_NAMES[selectedDate.getDay()]} ${selectedDate.getDate()} ${MONTH_NAMES[selectedDate.getMonth()]}`;
+    // Query only by barber + date — no status filter to avoid needing a composite index
     const q = query(
       collection(db, "bookings"),
       where("barber", "==", barber),
-      where("date", "==", dateStr),
-      where("status", "==", "confirmed")
+      where("date", "==", formattedDate)
     );
     const unsub = onSnapshot(q, (snap) => {
-      setTakenSlots(snap.docs.map((d) => d.data().time as string));
+      // Filter confirmed/rescheduled client-side, exclude the booking being rescheduled
+      const taken = snap.docs
+        .filter((d) => {
+          const status = d.data().status as string;
+          const isCurrentBooking = isReschedule && d.id === rescheduleId;
+          return !isCurrentBooking && (status === "confirmed" || status === "rescheduled");
+        })
+        .map((d) => d.data().time as string);
+      setTakenSlots(taken);
     });
     return unsub;
   }, [selectedDate, barber]);
@@ -109,22 +120,20 @@ export default function Booking() {
           rescheduledAt: new Date().toISOString(),
         });
 
-        // Log to reschedules collection
+        // Log to reschedules collection with old and new date
         addDoc(collection(db, "reschedules"), {
           bookingId: rescheduleId,
           uid: rescheduleEmail ?? null,
           service, barber,
-          oldDate: "previous",
+          oldDate: oldDate ?? "",
+          oldTime: oldTime ?? "",
           newDate,
           newTime: selectedTime,
           rescheduledAt: new Date().toISOString(),
         }).catch(() => {});
 
-        Alert.alert(
-          "Rescheduled",
-          `Your appointment has been rescheduled to ${newDate} at ${selectedTime}.`,
-          [{ text: "OK", onPress: () => router.replace("/profile") }]
-        );
+        setRescheduledTo(`${newDate} at ${selectedTime}`);
+        setShowRescheduleSuccess(true);
       } catch (err) {
         console.error(err);
         Alert.alert("Error", "Failed to reschedule. Please try again.");
@@ -150,6 +159,7 @@ export default function Booking() {
   const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   return (
+  <>
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -325,6 +335,29 @@ export default function Booking() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+
+    {/* Reschedule success modal */}
+    {showRescheduleSuccess && (
+      <View style={styles.successOverlay}>
+        <View style={styles.successCard}>
+          <Text style={styles.successIcon}>✓</Text>
+          <Text style={styles.successTitle}>Appointment Rescheduled</Text>
+          <Text style={styles.successBody}>
+            Your appointment has been moved to{"\n"}{rescheduledTo}
+          </Text>
+          <TouchableOpacity
+            style={styles.successBtn}
+            onPress={() => {
+              setShowRescheduleSuccess(false);
+              router.replace("/profile");
+            }}
+          >
+            <Text style={styles.successBtnText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )}
+  </>
   );
 }
 
@@ -420,4 +453,21 @@ const styles = StyleSheet.create({
     borderRadius: 10, borderWidth: 1, borderColor: COLORS.border,
   },
   editBtnText: { color: COLORS.primary, fontSize: 12, fontWeight: "700" },
+  successOverlay: {
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center", alignItems: "center", padding: 24,
+  },
+  successCard: {
+    backgroundColor: COLORS.card, borderRadius: 20,
+    padding: 28, width: "100%", alignItems: "center",
+  },
+  successIcon: { fontSize: 40, color: "#4caf50", marginBottom: 12 },
+  successTitle: { color: COLORS.text, fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  successBody: { color: COLORS.subtext, fontSize: 14, textAlign: "center", lineHeight: 22, marginBottom: 24 },
+  successBtn: {
+    backgroundColor: COLORS.text, paddingVertical: 14,
+    paddingHorizontal: 40, borderRadius: 30,
+  },
+  successBtnText: { color: COLORS.background, fontSize: 15, fontWeight: "700" },
 });

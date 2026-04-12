@@ -24,12 +24,17 @@ export default function Index() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleAuth = async () => {
     setError("");
     if (!email.trim() || !password.trim()) {
       setError("Please enter your email and password.");
+      return;
+    }
+    if (!isLogin && password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
     try {
@@ -40,6 +45,7 @@ export default function Index() {
         await createUserWithEmailAndPassword(auth, email, password);
         setEmail("");
         setPassword("");
+        setConfirmPassword("");
         setIsLogin(true);
         setError("");
       }
@@ -79,7 +85,7 @@ export default function Index() {
         <View style={styles.toggle}>
           <TouchableOpacity
             style={[styles.tab, isLogin && styles.activeTab]}
-            onPress={() => { setIsLogin(true); setError(""); }}
+            onPress={() => { setIsLogin(true); setError(""); setConfirmPassword(""); }}
           >
             <Text style={isLogin ? styles.activeText : styles.inactiveText}>
               Login
@@ -104,6 +110,14 @@ export default function Index() {
           value={password}
           onChangeText={(v: string) => { setPassword(v); setError(""); }}
         />
+        {!isLogin && (
+          <InputField
+            placeholder="Confirm Password"
+            secure
+            value={confirmPassword}
+            onChangeText={(v: string) => { setConfirmPassword(v); setError(""); }}
+          />
+        )}
 
         {/* ERROR */}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
