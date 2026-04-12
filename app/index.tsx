@@ -58,11 +58,13 @@ export default function Index() {
       } else if (code === "auth/invalid-email") {
         setError("Please enter a valid email address.");
       } else if (code === "auth/email-already-in-use") {
-        setError("An account with this email already exists.");
+        setError("This email is already taken. Please use a different one.");
       } else if (code === "auth/weak-password") {
         setError("Password must be at least 6 characters.");
+      } else if (code === "auth/network-request-failed") {
+        setError("No internet connection. Please check your network and try again.");
       } else {
-        setError(e.message ?? "Something went wrong. Please try again.");
+        setError("Something went wrong. Please try again.");
       }
     }
   };
