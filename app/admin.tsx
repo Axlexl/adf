@@ -1,25 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  updateDoc
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    onSnapshot,
+    updateDoc
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { COLORS } from "../constants/colors";
 import { auth, db } from "../services/firebase";
@@ -323,7 +323,10 @@ export default function Admin() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.push("/home")}>
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.pageTitle}>Admin</Text>
+        <View style={{ alignItems: "center" }}>
+          <Text style={styles.headerTag}>MANAGEMENT</Text>
+          <Text style={styles.pageTitle}>Admin Panel</Text>
+        </View>
         <View style={styles.placeholder} />
       </View>
 
@@ -627,33 +630,41 @@ const styles = StyleSheet.create({
     justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16,
   },
   backButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.card, justifyContent: "center", alignItems: "center" },
-  pageTitle: { color: COLORS.text, fontSize: 18, fontWeight: "bold" },
+  pageTitle: { color: COLORS.text, fontSize: 16, fontWeight: "800" },
+  headerTag: { color: COLORS.primary, fontSize: 9, fontWeight: "700", letterSpacing: 3 },
   placeholder: { width: 48 },
   tabs: { flexDirection: "row", paddingHorizontal: 20, paddingVertical: 10, gap: 8 },
-  tabBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: COLORS.card },
-  tabBtnActive: { backgroundColor: COLORS.text },
-  tabText: { color: COLORS.subtext, fontWeight: "600" },
-  tabTextActive: { color: COLORS.background, fontWeight: "700" },
+  tabBtn: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
+  tabBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  tabText: { color: COLORS.subtext, fontWeight: "600", fontSize: 13 },
+  tabTextActive: { color: COLORS.background, fontWeight: "700", fontSize: 13 },
   content: { padding: 20, paddingBottom: 40 },
   addBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: COLORS.text, paddingVertical: 12, paddingHorizontal: 20,
+    backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 20,
     borderRadius: 14, marginBottom: 16, alignSelf: "flex-start",
   },
-  addBtnText: { color: COLORS.background, fontWeight: "700", fontSize: 14 },
-  card: { backgroundColor: COLORS.card, borderRadius: 16, padding: 16, marginBottom: 12 },
+  addBtnText: { color: COLORS.background, fontWeight: "800", fontSize: 13, letterSpacing: 1 },
+  card: {
+    backgroundColor: COLORS.card, borderRadius: 16, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: COLORS.border,
+    borderLeftWidth: 3, borderLeftColor: COLORS.primary,
+  },
   cardRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   cardName: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
-  cardSub: { color: COLORS.subtext, fontSize: 12, marginTop: 2 },
-  iconBtn: { padding: 6 },
+  cardSub: { color: COLORS.subtext, fontSize: 12, marginTop: 3 },
+  iconBtn: { padding: 8 },
   avatar: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: COLORS.border, justifyContent: "center", alignItems: "center",
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: COLORS.primary, justifyContent: "center", alignItems: "center",
   },
-  avatarText: { color: COLORS.text, fontSize: 16, fontWeight: "700" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
-  modalCard: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
-  modalTitle: { color: COLORS.text, fontSize: 17, fontWeight: "700", marginBottom: 16 },
+  avatarText: { color: COLORS.background, fontSize: 16, fontWeight: "900" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 24, borderTopWidth: 3, borderTopColor: COLORS.primary,
+  },
+  modalTitle: { color: COLORS.primary, fontSize: 11, fontWeight: "700", letterSpacing: 3, marginBottom: 16 },
   input: {
     backgroundColor: COLORS.background, borderRadius: 10,
     borderWidth: 1, borderColor: COLORS.border,
@@ -664,13 +675,13 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: "row", gap: 10, marginTop: 6 },
   cancelModalBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, alignItems: "center" },
   cancelModalText: { color: COLORS.subtext, fontWeight: "600" },
-  saveBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: COLORS.text, alignItems: "center" },
-  saveBtnText: { color: COLORS.background, fontWeight: "700" },
+  saveBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: COLORS.primary, alignItems: "center" },
+  saveBtnText: { color: COLORS.background, fontWeight: "800" },
   statusBtn: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
     borderWidth: 1, borderColor: COLORS.border,
   },
-  statusBtnActive: { backgroundColor: COLORS.text, borderColor: COLORS.text },
+  statusBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   statusBtnText: { color: COLORS.subtext, fontSize: 12 },
   statusBtnTextActive: { color: COLORS.background, fontWeight: "700" },
   deleteOverlay: {
