@@ -44,6 +44,7 @@ type Booking = {
   date: string;
   time: string;
   status: string;
+  timezone?: string;
   fullName?: string;
   phone?: string;
   email?: string;
@@ -58,7 +59,7 @@ type Booking = {
 type CancellationRecord = { id: string; bookingId: string; service: string; barber: string; date: string; time: string; cancelledAt: string; uid?: string };
 type RescheduleRecord = { id: string; bookingId: string; service: string; barber: string; newDate: string; newTime: string; rescheduledAt: string; uid?: string };
 
-type Section = "appointments" | "details" | "transactions" | "cancellations" | "reschedules";
+type Section = "appointments" | "details" | "transactions" | "cancellations" | "reschedules" | "services" | "team";
 type Tab = "upcoming" | "past";
 
 // Parse the appointment date string (e.g. "Sun 26 April" or "Fri 10 April") into a Date
@@ -106,6 +107,8 @@ export default function Profile() {
   const [allCancellations, setAllCancellations] = useState<CancellationRecord[]>([]);
   const [allReschedules, setAllReschedules] = useState<RescheduleRecord[]>([]);
   const [txTab, setTxTab] = useState<"upcoming" | "past">("upcoming");
+  const [adminServices, setAdminServices] = useState<{id:string;title:string;duration:string;price:string}[]>([]);
+  const [adminTeam, setAdminTeam] = useState<{id:string;name:string;role:string}[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
@@ -289,11 +292,17 @@ export default function Profile() {
 
       {/* User info strip */}
       <View style={styles.userStrip}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {displayName.charAt(0).toUpperCase()}
-          </Text>
-        </View>
+        <TouchableOpacity onPress={() => setSection("details")} style={styles.avatarWrapper}>
+          {photoUri ? (
+            <RNImage source={{ uri: photoUri }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
         <View>
           <Text style={styles.userName}>{displayName}</Text>
           <Text style={styles.userEmail}>{displayEmail}</Text>
@@ -607,7 +616,7 @@ export default function Profile() {
                     <Text style={styles.modalValueBold}>
                       {selectedBooking.date} · {selectedBooking.time}
                     </Text>
-                    <Text style={styles.modalValueSub}>Time zone (Asia/Manila)</Text>
+                    <Text style={styles.modalValueSub}>Time zone ({selectedBooking.timezone ?? "Asia/Manila"})</Text>
                   </View>
                 </View>
                 <View style={styles.modalDivider} />
@@ -789,9 +798,13 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 14,
     paddingHorizontal: 20, paddingBottom: 16,
   },
+  avatarWrapper: { position: "relative" },
   avatar: {
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: COLORS.primary, justifyContent: "center", alignItems: "center",
+  },
+  avatarImage: {
+    width: 48, height: 48, borderRadius: 24,
   },
   avatarText: { color: "#fff", fontSize: 20, fontWeight: "800" },
   // Photo picker in details section

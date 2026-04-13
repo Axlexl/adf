@@ -16,10 +16,10 @@ import { COLORS } from "../../constants/colors";
 import { auth, db } from "../../services/firebase";
 
 export default function Details() {
-  const { service, price, duration, barber, date, time } =
+  const { service, price, duration, barber, date, time, timezone } =
     useLocalSearchParams<{
       service: string; price: string; duration: string;
-      barber: string; date: string; time: string;
+      barber: string; date: string; time: string; timezone?: string;
     }>();
 
   const [fullName, setFullName] = useState("");
@@ -70,6 +70,7 @@ export default function Details() {
     // Save booking
     addDoc(collection(db, "bookings"), {
       bookingId, service, price, duration, barber, date, time,
+      timezone: timezone ?? "Philippines – Manila",
       fullName, phone, email, address, city, province, postalCode, comments,
       uid, status: "confirmed", isoDate: now, createdAt: now,
     }).catch((err) => console.warn("Firestore bookings failed:", err));
@@ -85,6 +86,7 @@ export default function Details() {
     // Save transaction
     addDoc(collection(db, "transactions"), {
       bookingId, uid, service, price, barber, date, time,
+      timezone: timezone ?? "Philippines – Manila",
       fullName, status: "confirmed", createdAt: now,
     }).catch((err) => console.warn("Firestore transactions failed:", err));
 

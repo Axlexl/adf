@@ -3,17 +3,29 @@ import { router, useLocalSearchParams } from "expo-router";
 import { addDoc, collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { COLORS } from "../../constants/colors";
 import { db } from "../../services/firebase";
+
+const TIMEZONES = [
+  { label: "Philippines – Manila", offset: 8 },
+  { label: "Japan – Tokyo", offset: 9 },
+  { label: "Singapore", offset: 8 },
+  { label: "Australia – Sydney", offset: 10 },
+  { label: "UAE – Dubai", offset: 4 },
+  { label: "UK – London", offset: 1 },
+  { label: "USA – New York", offset: -4 },
+  { label: "USA – Los Angeles", offset: -7 },
+];
 
 const TIME_SLOTS = [
   "10:00 AM", "11:00 AM",
@@ -63,6 +75,8 @@ export default function Booking() {
   const [loading, setLoading] = useState(false);
   const [showRescheduleSuccess, setShowRescheduleSuccess] = useState(false);
   const [rescheduledTo, setRescheduledTo] = useState("");
+  const [selectedTz, setSelectedTz] = useState(TIMEZONES[0]);
+  const [showTzPicker, setShowTzPicker] = useState(false);
 
   useEffect(() => {
     if (!selectedDate || !barber) return;
@@ -116,6 +130,7 @@ export default function Booking() {
         await updateDoc(doc(db, "bookings", rescheduleId), {
           date: newDate,
           time: selectedTime,
+          timezone: selectedTz.label,
           status: "confirmed",
           rescheduledAt: new Date().toISOString(),
         });
@@ -145,7 +160,7 @@ export default function Booking() {
 
     router.push({
       pathname: "/categories/details" as any,
-      params: { service, price, duration, barber, date: formatSelectedDate(), time: selectedTime },
+      params: { service, price, duration, barber, date: formatSelectedDate(), time: selectedTime, timezone: selectedTz.label },
     });
     setLoading(false);
   }
@@ -236,10 +251,10 @@ export default function Booking() {
               </View>
 
               <Text style={styles.timezoneLabel}>Time zone</Text>
-              <View style={styles.timezoneBox}>
-                <Text style={styles.timezoneText}>Philippines – Manila</Text>
-                <Text style={styles.timezoneChevron}>⌄</Text>
-              </View>
+              <TouchableOpacity style={styles.timezoneBox} onPress={() => setShowTzPicker(true)}>
+                <Text style={styles.timezoneText}>{selectedTz.label}</Text>
+                <Ionicons name="chevron-down" size={14} color={COLORS.subtext} />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.timeSection}>
@@ -336,6 +351,33 @@ export default function Booking() {
       </View>
     </SafeAreaView>
 
+    {/* Timezone picker modal */}
+    <Modal visible={showTzPicker} transparent animationType="slide" onRequestClose={() => setShowTzPicker(false)}>
+      <View style={styles.tzOverlay}>
+        <View style={styles.tzSheet}>
+          <View style={styles.tzHeader}>
+            <Text style={styles.tzTitle}>Select Time Zone</Text>
+            <TouchableOpacity onPress={() => setShowTzPicker(false)}>
+              <Ionicons name="close" size={22} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+          {TIMEZONES.map((tz) => (
+            <TouchableOpacity
+              key={tz.label}
+              style={[styles.tzOption, selectedTz.label === tz.label && styles.tzOptionActive]}
+              onPress={() => { setSelectedTz(tz); setShowTzPicker(false); }}
+            >
+              <Text style={[styles.tzOptionText, selectedTz.label === tz.label && styles.tzOptionTextActive]}>
+                {tz.label}
+              </Text>
+              <Text style={styles.tzOffset}>UTC+{tz.offset}</Text>
+              {selectedTz.label === tz.label && <Ionicons name="checkmark" size={16} color={COLORS.primary} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </Modal>
+
     {/* Reschedule success modal */}
     {showRescheduleSuccess && (
       <View style={styles.successOverlay}>
@@ -372,7 +414,7 @@ const styles = StyleSheet.create({
   placeholder: { width: 48 },
   content: { paddingHorizontal: 16, paddingBottom: 320 },
   card: { backgroundColor: COLORS.card, borderRadius: 20, padding: 16 },
-  serviceLabel: { color: COLORS.text, fontSize: 18, fontWeight: "700", marginBottom: 16 },
+  serviceLabel: { color: COLORS.primary, fontSize: 11, fontWeight: "700", letterSpacing: 3, marginBottom: 16 },
   calendarTimeRow: { flexDirection: "row", gap: 12 },
   calendarSection: { flex: 1 },
   monthNav: {
@@ -395,19 +437,33 @@ const styles = StyleSheet.create({
     width: "14.28%", aspectRatio: 1,
     justifyContent: "center", alignItems: "center", borderRadius: 100,
   },
-  dayCellSelected: { backgroundColor: COLORS.text },
-  dayCellToday: { borderWidth: 1, borderColor: COLORS.text },
+  dayCellSelected: { backgroundColor: COLORS.primary },
+  dayCellToday: { borderWidth: 1, borderColor: COLORS.primary },
   dayCellText: { color: COLORS.text, fontSize: 12 },
   dayCellTextSelected: { color: COLORS.background, fontWeight: "700" },
   dayCellFaded: { color: COLORS.border },
   timezoneLabel: { color: COLORS.subtext, fontSize: 12, marginTop: 12, marginBottom: 6 },
   timezoneBox: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: 10,
+    borderWidth: 1, borderColor: COLORS.primary, borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: 8,
   },
-  timezoneText: { color: COLORS.text, fontSize: 13 },
-  timezoneChevron: { color: COLORS.subtext, fontSize: 14 },
+  timezoneText: { color: COLORS.text, fontSize: 12 },
+  tzOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  tzSheet: {
+    backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 20, paddingBottom: 36,
+  },
+  tzHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  tzTitle: { color: COLORS.text, fontSize: 16, fontWeight: "700" },
+  tzOption: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingVertical: 14, paddingHorizontal: 12, borderRadius: 12, marginBottom: 4,
+  },
+  tzOptionActive: { backgroundColor: "#1a1500" },
+  tzOptionText: { color: COLORS.subtext, fontSize: 14, flex: 1 },
+  tzOptionTextActive: { color: COLORS.text, fontWeight: "700" },
+  tzOffset: { color: COLORS.subtext, fontSize: 12, marginRight: 8 },
   timeSection: { flex: 1 },
   selectedDateLabel: { color: COLORS.text, fontSize: 13, fontWeight: "700", marginBottom: 10 },
   slotsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -437,17 +493,17 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  summaryTitle: { color: COLORS.text, fontSize: 15, fontWeight: "700", marginBottom: 12 },
+  summaryTitle: { color: COLORS.primary, fontSize: 10, fontWeight: "700", letterSpacing: 3, marginBottom: 12 },
   summaryRow: {
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "center", marginBottom: 6,
   },
   summaryServiceName: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
   summaryMeta: { color: COLORS.subtext, fontSize: 13, marginTop: 2 },
-  summaryPrice: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
+  summaryPrice: { color: COLORS.primary, fontSize: 14, fontWeight: "700" },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 10 },
   totalLabel: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
-  totalPrice: { color: COLORS.text, fontSize: 14, fontWeight: "700" },
+  totalPrice: { color: COLORS.primary, fontSize: 15, fontWeight: "700" },
   editBtn: {
     paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: 10, borderWidth: 1, borderColor: COLORS.border,

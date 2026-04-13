@@ -29,7 +29,7 @@ const ADMIN_EMAIL = "admin@alldayfade.com";
 type Service = { id: string; title: string; duration: string; price: string; details: string[] };
 type Member = { id: string; name: string; role: string; description: string };
 type BarberSchedule = { id: string; barberId: string; date: string; availableSlots: string[]; takenSlots: string[] };
-type BookingTransaction = { id: string; bookingId: string; uid: string; service: string; price: string; barber: string; date: string; time: string; status: string; fullName?: string; createdAt: string };
+type BookingTransaction = { id: string; bookingId: string; uid: string; service: string; price: string; barber: string; date: string; time: string; timezone?: string; status: string; fullName?: string; createdAt: string };
 type Cancellation = { id: string; bookingId: string; service: string; barber: string; date: string; time: string; cancelledAt: string };
 type Reschedule = { id: string; bookingId: string; service: string; barber: string; newDate: string; newTime: string; rescheduledAt: string };
 type Tab = "services" | "team" | "schedules" | "transactions" | "cancellations" | "reschedules";
@@ -454,6 +454,7 @@ export default function Admin() {
                       <Text style={styles.cardName}>{tx.service}</Text>
                       <Text style={styles.cardSub}>{tx.barber} · {tx.date} · {tx.time}</Text>
                       <Text style={styles.cardSub}>{tx.price} · {tx.fullName ?? "Client"}</Text>
+                      {tx.timezone && <Text style={styles.cardSub}>🕐 {tx.timezone}</Text>}
                       <Text style={[styles.cardSub, { marginTop: 4, color: tx.status === "confirmed" ? "#4caf50" : COLORS.subtext }]}>
                         Status: {tx.status}
                       </Text>
@@ -633,11 +634,11 @@ const styles = StyleSheet.create({
   pageTitle: { color: COLORS.text, fontSize: 16, fontWeight: "800" },
   headerTag: { color: COLORS.primary, fontSize: 9, fontWeight: "700", letterSpacing: 3 },
   placeholder: { width: 48 },
-  tabs: { flexDirection: "row", paddingHorizontal: 20, paddingVertical: 10, gap: 8 },
-  tabBtn: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
+  tabs: { flexDirection: "row", paddingHorizontal: 20, paddingRight: 40, paddingVertical: 10, gap: 8 },
+  tabBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
   tabBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  tabText: { color: COLORS.subtext, fontWeight: "600", fontSize: 13 },
-  tabTextActive: { color: COLORS.background, fontWeight: "700", fontSize: 13 },
+  tabText: { color: COLORS.subtext, fontWeight: "600", fontSize: 12 },
+  tabTextActive: { color: COLORS.background, fontWeight: "700", fontSize: 12 },
   content: { padding: 20, paddingBottom: 40 },
   addBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,
