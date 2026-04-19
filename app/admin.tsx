@@ -21,6 +21,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import PageLoader from "../components/ui/PageLoader";
 import { COLORS } from "../constants/colors";
 import { auth, db } from "../services/firebase";
 
@@ -316,6 +317,8 @@ export default function Admin() {
     snap.forEach((d) => updateDoc(doc(db, "bookings", d.id), data));
     setShowTxModal(false);
   }
+
+  if (loading) return <PageLoader />;
 
   return (
     <SafeAreaView style={styles.container}>

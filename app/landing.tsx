@@ -1,18 +1,32 @@
 import { router } from "expo-router";
+import { useState } from "react";
 import {
-  Image as RNImage,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image as RNImage,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import PageLoader from "../components/ui/PageLoader";
 import { COLORS } from "../constants/colors";
 
 // Using URI fallback — replace with require("../assets/images/adf2.png") once file is added
 const logoSource = { uri: "https://img.freepik.com/premium-vector/adf-creative-abstract-alphabet-modern-minimal-letter-initial-business-symbol-icon-vector-logo_1237311-3286.jpg" };
 
 export default function Landing() {
+  const [loading, setLoading] = useState(false);
+
+  function handleGetStarted() {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      router.replace("/auth" as any);
+    }, 1200);
+  }
+
+  if (loading) return <PageLoader />;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
@@ -40,10 +54,9 @@ export default function Landing() {
           wait. Its goal is to make booking easy and convenient.
         </Text>
 
-        {/* Get Started */}
         <TouchableOpacity
           style={styles.btn}
-          onPress={() => router.push("/auth" as any)}
+          onPress={handleGetStarted}
           activeOpacity={0.85}
         >
           <Text style={styles.btnText}>Get Started</Text>

@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import PageLoader from "../../components/ui/PageLoader";
 import { COLORS } from "../../constants/colors";
 import { db } from "../../services/firebase";
 
@@ -66,6 +67,11 @@ export default function Booking() {
 
   const isReschedule = !!rescheduleId;
 
+  useEffect(() => {
+    const timer = setTimeout(() => setPageReady(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -73,14 +79,14 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [takenSlots, setTakenSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pageReady, setPageReady] = useState(false);
   const [showRescheduleSuccess, setShowRescheduleSuccess] = useState(false);
   const [rescheduledTo, setRescheduledTo] = useState("");
   const [selectedTz, setSelectedTz] = useState(TIMEZONES[0]);
   const [showTzPicker, setShowTzPicker] = useState(false);
 
   useEffect(() => {
-    if (!selectedDate || !barber) return;
-    const formattedDate = `${DAY_NAMES[selectedDate.getDay()]} ${selectedDate.getDate()} ${MONTH_NAMES[selectedDate.getMonth()]}`;
+    if (!selectedDate || !barber) return;    const formattedDate = `${DAY_NAMES[selectedDate.getDay()]} ${selectedDate.getDate()} ${MONTH_NAMES[selectedDate.getMonth()]}`;
     // Query only by barber + date — no status filter to avoid needing a composite index
     const q = query(
       collection(db, "bookings"),
@@ -172,6 +178,8 @@ export default function Booking() {
 
   const cells = buildCalendar(viewYear, viewMonth);
   const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  if (!pageReady) return <PageLoader />;
 
   return (
   <>

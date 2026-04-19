@@ -26,6 +26,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import PageLoader from "../components/ui/PageLoader";
 import { COLORS } from "../constants/colors";
 import { auth, db } from "../services/firebase";
 
@@ -116,6 +117,7 @@ export default function Profile() {
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const latestBooking = bookings[0] ?? null;
@@ -213,6 +215,7 @@ export default function Profile() {
 
   async function confirmLogout() {
     setShowLogoutModal(false);
+    setLoggingOut(true);
     await signOut(auth);
     router.replace("/");
   }
@@ -276,6 +279,9 @@ export default function Profile() {
   const displayName =
     latestBooking?.fullName || user?.email?.split("@")[0] || "Client";
   const displayEmail = user?.email || "";
+
+  if (loadingBookings) return <PageLoader />;
+  if (loggingOut) return <PageLoader />;
 
   return (
     <SafeAreaView style={styles.container}>

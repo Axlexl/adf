@@ -1,7 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
     StyleSheet,
-    Text,
     TextInput,
     TouchableOpacity,
     View,
@@ -27,8 +27,12 @@ export default function InputField({
         style={styles.input}
       />
       {secure && (
-        <TouchableOpacity onPress={() => setHide(!hide)}>
-          <Text style={styles.toggle}>{hide ? "Show" : "Hide"}</Text>
+        <TouchableOpacity onPress={() => setHide(!hide)} style={styles.eyeBtn}>
+          <Ionicons
+            name={hide ? "eye-off-outline" : "eye-outline"}
+            size={20}
+            color={COLORS.subtext}
+          />
         </TouchableOpacity>
       )}
     </View>
@@ -49,8 +53,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: COLORS.text,
   },
-  toggle: {
-    color: COLORS.subtext,
-    fontWeight: "bold",
+  eyeBtn: {
+    padding: 4,
   },
 });

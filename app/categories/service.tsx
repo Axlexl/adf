@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import PageLoader from "../../components/ui/PageLoader";
 import { COLORS } from "../../constants/colors";
 import { db } from "../../services/firebase";
 
@@ -29,6 +30,7 @@ export default function Service() {
   const [services, setServices] = useState<Service[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [pageReady, setPageReady] = useState(false);
 
   useEffect(() => {
     return onSnapshot(collection(db, "services"), (snap) => {
@@ -46,6 +48,7 @@ export default function Service() {
             .sort((a, b) => a.title.localeCompare(b.title))
         );
       }
+      setPageReady(true);
     });
   }, []);
 
@@ -64,6 +67,8 @@ export default function Service() {
       },
     });
   }
+
+  if (!pageReady) return <PageLoader />;
 
   return (
     <SafeAreaView style={styles.container}>
