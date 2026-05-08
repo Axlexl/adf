@@ -3,15 +3,16 @@ import { router, useLocalSearchParams } from "expo-router";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import PageLoader from "../../components/ui/PageLoader";
 import { COLORS } from "../../constants/colors";
+import { usePageLoader } from "../../hooks/usePageLoader";
 import { db } from "../../services/firebase";
 
 type Barber = { id: string; name: string; role: string };
@@ -25,14 +26,13 @@ export default function SelectBarber() {
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [pageReady, setPageReady] = useState(false);
+  const pageReady = usePageLoader(500);
 
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     const unsubBarbers = onSnapshot(query(collection(db, "team")), (snap) => {
       setBarbers(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Barber, "id">) })));
-      setPageReady(true);
     });
     const unsubSchedules = onSnapshot(query(collection(db, "barber_schedules")), (snap) => {
       setSchedules(snap.docs.map((d) => d.data() as Schedule));

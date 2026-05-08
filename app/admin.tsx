@@ -23,6 +23,7 @@ import {
 } from "react-native";
 import PageLoader from "../components/ui/PageLoader";
 import { COLORS } from "../constants/colors";
+import { usePageLoader } from "../hooks/usePageLoader";
 import { auth, db } from "../services/firebase";
 
 const ADMIN_EMAIL = "admin@alldayfade.com";
@@ -60,6 +61,7 @@ export default function Admin() {
   const [cancellations, setCancellations] = useState<Cancellation[]>([]);
   const [reschedules, setReschedules] = useState<Reschedule[]>([]);
   const [loading, setLoading] = useState(true);
+  const pageReady = usePageLoader(500);
 
   // Delete confirmation modal
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; collection: string } | null>(null);
@@ -318,7 +320,7 @@ export default function Admin() {
     setShowTxModal(false);
   }
 
-  if (loading) return <PageLoader />;
+  if (!pageReady) return <PageLoader />;
 
   return (
     <SafeAreaView style={styles.container}>

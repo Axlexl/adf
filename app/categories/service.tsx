@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import PageLoader from "../../components/ui/PageLoader";
 import { COLORS } from "../../constants/colors";
+import { usePageLoader } from "../../hooks/usePageLoader";
 import { db } from "../../services/firebase";
 
 type Service = { id: string; title: string; duration: string; price: string; details: string[] };
@@ -30,7 +31,7 @@ export default function Service() {
   const [services, setServices] = useState<Service[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [pageReady, setPageReady] = useState(false);
+  const pageReady = usePageLoader(500);
 
   useEffect(() => {
     return onSnapshot(collection(db, "services"), (snap) => {
@@ -48,7 +49,6 @@ export default function Service() {
             .sort((a, b) => a.title.localeCompare(b.title))
         );
       }
-      setPageReady(true);
     });
   }, []);
 

@@ -1,17 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import PageLoader from "../components/ui/PageLoader";
+import { usePageLoader } from "../hooks/usePageLoader";
 import { auth, db } from "../services/firebase";
 
 const ADMIN_EMAIL = "admin@alldayfade.com";
@@ -36,20 +37,20 @@ export default function Home() {
   const isAdmin = auth.currentUser?.email === ADMIN_EMAIL;
   const pathname = usePathname();
   const [displayName, setDisplayName] = useState("");
-  const [pageReady, setPageReady] = useState(false);
+  const pageReady = usePageLoader(500);
 
   useEffect(() => {
     const user = auth.currentUser;
-    if (!user) { setPageReady(true); return; }
-    if (isAdmin) { setDisplayName("Admin"); setPageReady(true); return; }
-    getDoc(doc(db, "users", user.uid)).then((snap) => {
+    if (!user) return;
+    if (isAdmin) { setDisplayName("Admin"); return; }
+    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
       if (snap.exists() && snap.data().fullName) {
         setDisplayName(snap.data().fullName.split(" ")[0]);
       } else {
         setDisplayName(user.email?.split("@")[0] ?? "");
       }
-    }).catch(() => setDisplayName(user.email?.split("@")[0] ?? ""))
-      .finally(() => setPageReady(true));
+    });
+    return unsub;
   }, []);
 
   if (!pageReady) return <PageLoader />;

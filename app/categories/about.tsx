@@ -11,10 +11,13 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import PageLoader from "../../components/ui/PageLoader";
 import { COLORS } from "../../constants/colors";
+import { usePageLoader } from "../../hooks/usePageLoader";
 
 export default function About() {
   const [policyVisible, setPolicyVisible] = useState(false);
+  const pageReady = usePageLoader(500);
 
   const openLink = async (url: string) => {
     try {
@@ -23,6 +26,8 @@ export default function About() {
       console.warn("Unable to open URL:", url, error);
     }
   };
+
+  if (!pageReady) return <PageLoader />;
 
   return (
     <SafeAreaView style={styles.container}>

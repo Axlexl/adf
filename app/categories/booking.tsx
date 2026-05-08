@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import PageLoader from "../../components/ui/PageLoader";
 import { COLORS } from "../../constants/colors";
+import { usePageLoader } from "../../hooks/usePageLoader";
 import { db } from "../../services/firebase";
 
 const TIMEZONES = [
@@ -67,10 +68,7 @@ export default function Booking() {
 
   const isReschedule = !!rescheduleId;
 
-  useEffect(() => {
-    const timer = setTimeout(() => setPageReady(true), 300);
-    return () => clearTimeout(timer);
-  }, []);
+  const pageReady = usePageLoader(500);
 
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -79,7 +77,6 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [takenSlots, setTakenSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pageReady, setPageReady] = useState(false);
   const [showRescheduleSuccess, setShowRescheduleSuccess] = useState(false);
   const [rescheduledTo, setRescheduledTo] = useState("");
   const [selectedTz, setSelectedTz] = useState(TIMEZONES[0]);

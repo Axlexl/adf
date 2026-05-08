@@ -9,7 +9,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import PageLoader from "../../components/ui/PageLoader";
 import { COLORS } from "../../constants/colors";
+import { usePageLoader } from "../../hooks/usePageLoader";
 
 const GOLD = COLORS.primary;
 
@@ -24,6 +26,10 @@ const details = [
 ];
 
 export default function Address() {
+  const pageReady = usePageLoader(500);
+
+  if (!pageReady) return <PageLoader />;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>

@@ -159,8 +159,8 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   quote: {
-    color: COLORS.border,
-    fontSize: 12,
+    color: COLORS.subtext,
+    fontSize: 13,
     fontStyle: "italic",
     letterSpacing: 1,
   },

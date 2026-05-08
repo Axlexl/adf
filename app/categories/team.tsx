@@ -10,7 +10,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import PageLoader from "../../components/ui/PageLoader";
 import { COLORS } from "../../constants/colors";
+import { usePageLoader } from "../../hooks/usePageLoader";
 import { db } from "../../services/firebase";
 
 type Member = { id: string; name: string; role: string; description: string };
@@ -26,6 +28,7 @@ const DEFAULT_TEAM: Omit<Member, "id">[] = [
 
 export default function Team() {
   const [teamMembers, setTeamMembers] = useState<Member[]>([]);
+  const pageReady = usePageLoader(500);
 
   useEffect(() => {
     return onSnapshot(collection(db, "team"), (snap) => {
@@ -43,6 +46,8 @@ export default function Team() {
       }
     });
   }, []);
+
+  if (!pageReady) return <PageLoader />;
 
   return (
     <SafeAreaView style={styles.container}>

@@ -28,6 +28,7 @@ import {
 } from "react-native";
 import PageLoader from "../components/ui/PageLoader";
 import { COLORS } from "../constants/colors";
+import { usePageLoader } from "../hooks/usePageLoader";
 import { auth, db } from "../services/firebase";
 
 const SHOP_ADDRESS =
@@ -103,6 +104,7 @@ export default function Profile() {
   const isAdmin = user?.email === ADMIN_EMAIL;
   const [section, setSection] = useState<Section>("appointments");
   const [tab, setTab] = useState<Tab>("upcoming");
+  const pageReady = usePageLoader(500);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [allTransactions, setAllTransactions] = useState<Booking[]>([]);
   const [allCancellations, setAllCancellations] = useState<CancellationRecord[]>([]);
@@ -280,7 +282,7 @@ export default function Profile() {
     latestBooking?.fullName || user?.email?.split("@")[0] || "Client";
   const displayEmail = user?.email || "";
 
-  if (loadingBookings) return <PageLoader />;
+  if (!pageReady) return <PageLoader />;
   if (loggingOut) return <PageLoader />;
 
   return (
