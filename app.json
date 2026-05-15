@@ -4,19 +4,15 @@
     "slug": "adf",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
     "scheme": "adf",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.alldayfade.app"
     },
     "android": {
       "package": "com.alldayfade.app",
-      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0D0D0D"
       }
     },
@@ -25,8 +21,7 @@
       "expo-image-picker"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }
