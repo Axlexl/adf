@@ -4,6 +4,7 @@
     "slug": "adf",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
     "scheme": "adf",
     "userInterfaceStyle": "dark",
     "ios": {
@@ -13,11 +14,9 @@
     "android": {
       "package": "com.alldayfade.app",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0D0D0D"
-      },
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      }
     },
     "plugins": [
       "expo-router",
