@@ -14,7 +14,10 @@
       "package": "com.alldayfade.app",
       "adaptiveIcon": {
         "backgroundColor": "#0D0D0D"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -22,6 +25,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5db4e670-79f7-4ca8-b4c5-4aa24a6fc06a"
+      }
     }
   }
 }
