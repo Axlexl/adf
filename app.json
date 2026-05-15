@@ -4,6 +4,7 @@
     "slug": "adf",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
     "scheme": "adf",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -15,11 +16,9 @@
       "package": "com.alldayfade.app",
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0D0D0D"
-      },
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      }
     },
     "plugins": [
       "expo-router",
@@ -28,13 +27,6 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "5db4e670-79f7-4ca8-b4c5-4aa24a6fc06a"
-      }
-    },
-    "owner": "axlxl"
+    }
   }
 }
